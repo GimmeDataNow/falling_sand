@@ -109,7 +109,7 @@ fn main() -> Result<(), Error> {
                                     color: cells_layer::CellTypeProperties::get_cell_properties(cells_layer::CellType::Sand).base_color, 
                                     generation: 0, 
                                     temp: 20.0}
-                            )
+                            ).ok();
                         }
                         
 
@@ -120,12 +120,11 @@ fn main() -> Result<(), Error> {
                                 color: a.base_color, 
                                 generation: 0, 
                                 temp: 20.0 
-                            })
+                            }).ok();
                         }
                         if input.key_pressed(VirtualKeyCode::Space) {
                             simulation_space.update_cell_behaviour();
                             simulation_space.update_cell_alchemy();
-                            print!("next frame")
                         }
                         
                         if input.key_pressed(VirtualKeyCode::P) { counter += 1 }
@@ -141,7 +140,7 @@ fn main() -> Result<(), Error> {
                                     generation: 0, 
                                     temp: 20.0
                                     }
-                                )
+                                ).ok();
                             }
                             
                             print!("The selected Material is {} | You are looking at {}                                          \r",b.1, a);

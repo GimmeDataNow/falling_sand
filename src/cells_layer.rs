@@ -2,6 +2,16 @@ use std::{usize, isize};
 
 // imports:
 use rand::Rng;
+use debug_print::debug_print;
+
+#[allow(dead_code)]
+#[derive(Debug)]
+pub enum CustomErrors {
+    None,
+    OutOfBounds,
+    UndefinedBehavior,
+    CouldNotComplete
+}
 
 /// The ```CellType``` is the material of a cell
 /// # Options:
@@ -215,9 +225,9 @@ impl Space {
 
     /// # Functionality:
     /// Returns the ```Option<isize>``` where ```Some()``` is the checked index ```i```
-    pub fn get_index_checked(&self, x: i32, y: i32) -> Result<isize, bool> {
+    pub fn get_index_checked(&self, x: i32, y: i32) -> Result<isize, CustomErrors> {
         if x > self.width || y > self.height || x < 0 || y < 0 {
-            Err(false)
+            Err(CustomErrors::OutOfBounds)
         } else {
             Ok(self.get_index(x, y))
         }
@@ -238,16 +248,15 @@ impl Space {
     /// Swaps two cells with the index i and j
     /// # Panic behaviour:
     /// Panics if ```self.index_inbounds(i) == false``` or ```self.index_inbounds(j) == false```
-    pub fn swap_cells(&mut self, i: usize, j: usize) {
-
-        // the swap
-        let i_cell = self.cells[i];
-        self.cells[i] = self.cells[j];
-        self.cells[j] = i_cell;
+    pub fn swap_cells(&mut self, i: isize, j: isize) {
+        let ii = i as usize;
+        let jj = j as usize;
+        //simplified the swap using std::mem::swap / Vec::swap
+        self.cells.swap(ii, jj);
 
         //mark it as updated
-        self.cells[j].generation = self.generation;
-        self.cells[i].generation = self.generation;
+        self.cells[jj].generation = self.generation;
+        self.cells[ii].generation = self.generation;
     }
 
     /// # Functionality:
@@ -272,16 +281,19 @@ impl Space {
     /// May cause a cell to wait too long to update, due to ```self.cells[i].generation = self.generation```
     /// # Panic behaviour:
     /// Panics if ```i < 0```
-    pub fn set_cell_checked(&mut self, i: usize, cell: &Cell) {
+    pub fn set_cell_checked(&mut self, i: usize, cell: &Cell) -> Result<bool, CustomErrors> {
 
         // check the index
-        if !self.index_inbounds(i as isize) { return }
+        if !self.index_inbounds(i as isize) { return Err(CustomErrors::OutOfBounds) }
 
         // replace the cell
         self.cells[i] = *cell;
 
         //mark it as updated
         self.cells[i].generation = self.generation;
+
+        // return true
+        Ok(true)
     }
 
     /// # Functionality:
@@ -328,7 +340,7 @@ impl Space {
     /// Depending on the ```gravity_normal``` bool it moves it up or down. If ```gravity_normal``` is set to true gravity is normal
     /// # Undefined behaviour:
     /// If ```i < 0 || i > self.lenght``` then it might cause unwanted behavior. Not really 'undefined', but usually unwanted
-    pub fn try_move_vert(&mut self, i: isize, gravity_normal: bool) -> bool {
+    pub fn try_move_vert(&mut self, i: isize, gravity_normal: bool) -> Result<bool, CustomErrors> {
         
         //gets coordinates for later usage
         let xy = self.get_coordinates(i);
@@ -341,7 +353,7 @@ impl Space {
 
                     //check if both coordinates are inbounds
                     // once used: if !self.index_inbounds(i) { return false }
-                    if !self.index_inbounds(j) { return false }
+                    if !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
                     
                     // assign vars that are the converted indexes
                     let ii = i as usize;
@@ -349,15 +361,16 @@ impl Space {
 
                     // compares the densites of the materials and checks if its an immovable solid
                     if self.cells[ii].get_properties().density > self.cells[jj].get_properties().density && self.cells[jj].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[jj].get_properties().state != StateOfAggregation::Granular {
-                        self.swap_cells(ii, jj);
+                        self.swap_cells(i, j);
                     }
                     else {
-                        return false;
+                        return Err(CustomErrors::OutOfBounds);
                     }
                     
-                true
+                Ok(true)
                 },
-            Err(_) => false,
+            Err(CustomErrors::OutOfBounds) => Err(CustomErrors::OutOfBounds),
+            Err(_) => Err(CustomErrors::UndefinedBehavior)
         }
     }
     
@@ -368,37 +381,19 @@ impl Space {
     /// Then test for ```index_inbounds``` && ```density difference```
     pub fn check_sides(&mut self, i: isize) -> [bool; 4] {
 
-        // create mutable variables that will be returned in the [bool; 4] array
-        let mut left = false;
-        let mut right = false;
-        let mut left_less_dense = false;
-        let mut right_less_dense = false;
+        //bounds check
+        let i_left = self.index_inbounds(i - 1);
+        let i_right = self.index_inbounds(i + 1);
 
-        // test for index_inbounds() && boundary detetection && ```non-ImmovableSolid ```
-        // then test for index_inbounds && density difference
-        //if self.index_inbounds(i - 1) && i % self.width as isize != 0 && self.cells[(i - 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[(i - 1) as usize].get_properties().state != StateOfAggregation::Granular {
-        //    left = true;
-        //     
-        //    if self.index_inbounds(i - (self.height * offset) as isize) && self.cells[i as usize - (self.height * offset) as usize].get_properties().density > self.cells[(i - 1) as usize].get_properties().density { left_less_dense = true }
-        //}
-        //if self.index_inbounds(i + 1) && i % self.width as isize != self.width as isize - 1 && self.cells[(i + 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[(i + 1) as usize].get_properties().state != StateOfAggregation::Granular {
-        //    right = true;
-        //     
-        //    if self.index_inbounds(i - (self.height * offset) as isize) && self.cells[i as usize - (self.height * offset) as usize].get_properties().density > self.cells[(i + 1) as usize].get_properties().density { right_less_dense = true }
-        //}
+        // left side (i - 1)
+        let left = i_left && self.cells[(i - 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[i as usize].get_properties().state != StateOfAggregation::Granular;
+        let left_less_dense = i_left &&self.cells[(i - 1) as usize].get_properties().density < self.cells[i as usize].get_properties().density;
 
-        if self.index_inbounds(i - 1) && self.cells[(i - 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[(i - 1) as usize].get_properties().state != StateOfAggregation::Granular {
-            left = true;
-            if self.cells[(i - 1) as usize].get_properties().density <= self.cells[i as usize].get_properties().density {
-                left_less_dense = true;
-            }
-        }
-        if self.index_inbounds(i + 1) && self.cells[(i + 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[(i + 1) as usize].get_properties().state != StateOfAggregation::Granular {
-            right = true;
-            if self.cells[(i + 1) as usize].get_properties().density <= self.cells[i as usize].get_properties().density {
-                right_less_dense = true;
-            }
-        }
+        // right side (i + 1)
+        let right = i_right && self.cells[(i + 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[i as usize].get_properties().state != StateOfAggregation::Granular;
+        let right_less_dense = i_right &&self.cells[(i + 1) as usize].get_properties().density < self.cells[i as usize].get_properties().density;
+
+        // return
         [left, left_less_dense, right, right_less_dense]
     }
     
@@ -406,18 +401,14 @@ impl Space {
     /// Checks if a cell is air or if the cell is not an ```ImmovableSolid```, and then it compares densities
     /// # Structure:
     /// first checks if cells to the left and right and the ones below and afterwards checks for density if ```density_based == true```
-    pub fn try_move_diagonally(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
+    pub fn try_move_diagonally(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> Result<bool, CustomErrors> {
 
         // turns the gravity_normal bool into something more usable
         let dy:i32 = if gravity_normal { 1 } else { -1 };
 
         // handle index i and j. Check self.index_inbounds(i) and self.index_inbounds(j)
         let j = i + (dy * self.height) as isize;
-        if !self.index_inbounds(i) || !self.index_inbounds(j) { return false }
-        
-        // ii and jj are just i and j converted to usize
-        let ii = i as usize;
-        let jj = j as usize;
+        if !self.index_inbounds(i) || !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
         
         // make a new rand_bool that decides bias of swap order
         let rand_bool = rand::random::<bool>();
@@ -427,37 +418,43 @@ impl Space {
         let same_level_array = self.check_sides(i);
         let offset_level_array = self.check_sides(j);
 
-        let mut can_move:[bool;2] = [false; 2];
+        // let mut can_move:[bool;2] = [false; 2];
         //let can_move:[bool; 4] = [same_level_array[0] && offset_level_array[0], same_level_array[1] && offset_level_array[1], same_level_array[2] && offset_level_array[2], same_level_array[3] && offset_level_array[3]];
-        if density_based { can_move = [same_level_array[0] && offset_level_array[0] && same_level_array[1] && offset_level_array[1], same_level_array[2] && offset_level_array[2] && same_level_array[3] && offset_level_array[3]];}
-        else { can_move = [same_level_array[0] && offset_level_array[0], same_level_array[2] && offset_level_array[2]];}
+        // if density_based { can_move = [same_level_array[0] && offset_level_array[0] && same_level_array[1] && offset_level_array[1], same_level_array[2] && offset_level_array[2] && same_level_array[3] && offset_level_array[3]];}
+        // else { can_move = [same_level_array[0] && offset_level_array[0], same_level_array[2] && offset_level_array[2]];}
+        let can_move = if density_based {[same_level_array[0] && offset_level_array[0] && same_level_array[1] && offset_level_array[1], same_level_array[2] && offset_level_array[2] && same_level_array[3] && offset_level_array[3]]} 
+            else {[same_level_array[0] && offset_level_array[0], same_level_array[2] && offset_level_array[2]]};
 
+        // swap based on rand_bool to randomise the resulting swap
         if rand_bool {
             if can_move[0] {
-                self.swap_cells(ii, jj - 1);
-                return true;
+                self.swap_cells(i, j - 1);
+                return Ok(true);
             }
             else if can_move[1] {
-                self.swap_cells(ii, jj + 1);
-                return true;
+                self.swap_cells(i, j + 1);
+                return Ok(true);
             }
         }
         else if can_move[1] {
-            self.swap_cells(ii, jj + 1);
-            return true;
+            self.swap_cells(i, j + 1);
+            return Ok(true);
         }
         else if can_move[0] {
-            self.swap_cells(ii, jj - 1);
-            return true;
+            self.swap_cells(i, j - 1);
+            return Ok(true);
         }
-        false
+
+        //if anyting errors then his is undefined behavior
+        debug_print!("{:#?}", CustomErrors::UndefinedBehavior);
+        Err(CustomErrors::UndefinedBehavior)
     }
 
     /// # Functionality:
     /// Checks if a cell is air or if the cell is not an ```ImmovableSolid```, and then it compares densities
     /// # Structure:
     /// checks if cells to the left and right and randomly selects a order of execution
-    pub fn try_move_sideways(&mut self, i: isize, density_based: bool) -> bool {
+    pub fn try_move_sideways(&mut self, i: isize, density_based: bool) -> Result<bool, CustomErrors> {
 
         // create variables for further processing
         let same_level = self.check_sides(i);
@@ -477,24 +474,24 @@ impl Space {
         // select order of execution and swap if possible
         if rand_bool {
             if can_move_left_and_right.0 {
-                self.swap_cells(i as usize, (i - 1) as usize );
-                return true;
+                self.swap_cells(i, i - 1);
+                return Ok(true);
             }
             else if can_move_left_and_right.1 {
-                self.swap_cells(i as usize, (i + 1) as usize );
-                return true;
+                self.swap_cells(i, i + 1);
+                return Ok(true);
             }
         }
         else if can_move_left_and_right.1 {
-            self.swap_cells(i as usize, (i + 1) as usize );
-            return true;
+            self.swap_cells(i, i + 1);
+            return Ok(true);
         }
         else if can_move_left_and_right.0 {
-            self.swap_cells(i as usize, (i - 1) as usize );
-            return true;
+            self.swap_cells(i, i - 1);
+            return Ok(true);
         }
-
-        false
+        debug_print!("{:#?}", CustomErrors::UndefinedBehavior);
+        Err(CustomErrors::UndefinedBehavior)
     }
 
     /// # Functionality:
@@ -504,20 +501,20 @@ impl Space {
     /// # Structure:
     /// first checks self.try_move_vert() and then self.try_move_diagonally()
     pub fn move_granular(&mut self, i: isize, gravity_normal: bool, density_based: bool) {
-        if self.try_move_vert(i, gravity_normal) { return }
-        self.try_move_diagonally(i, gravity_normal, density_based);
+        if self.try_move_vert(i, gravity_normal).is_ok() { return }
+        self.try_move_diagonally(i, gravity_normal, density_based).ok();
     }
 
     pub fn move_liquid(&mut self, i: isize, gravity_normal: bool, density_based: bool) {
-        if self.try_move_vert(i, gravity_normal) { return }
-        if self.try_move_diagonally(i, gravity_normal, density_based) { return }
-        self.try_move_sideways(i, density_based);
+        if self.try_move_vert(i, gravity_normal).is_ok() { return }
+        if self.try_move_diagonally(i, gravity_normal, density_based).is_ok() { return }
+        self.try_move_sideways(i, density_based).ok();
     }
 
     pub fn move_gas(&mut self, i: isize, gravity_normal: bool, density_based: bool) {
-        if self.try_move_vert(i, gravity_normal) { return }
-        if self.try_move_diagonally(i, gravity_normal, density_based) { return }
-        self.try_move_sideways(i, density_based);
+        if self.try_move_vert(i, gravity_normal).is_ok() { return }
+        if self.try_move_diagonally(i, gravity_normal, density_based).is_ok() { return }
+        self.try_move_sideways(i, density_based).ok();
     }
 
     pub fn is_solid(&self, position: (i32, i32)) -> bool {
@@ -535,7 +532,8 @@ impl Space {
         for i in 0..(self.lenght - 1) as usize {
             match self.cells[i].cell_type {
                 // change the rng range for different probabilities
-                CellType::Steam => if rand::thread_rng().gen_range(1..=1250) < 2 { self.set_cell_checked(i, &Cell { cell_type: CellType::Water, color: CellTypeProperties::get_cell_properties(CellType::Water).base_color, generation: 0, temp: 20.0 })},
+                // ignore the safety checks since i is already in range
+                CellType::Steam => if rand::thread_rng().gen_range(1..=1250) < 2 { self.set_cell(i, &Cell { cell_type: CellType::Water, color: CellTypeProperties::get_cell_properties(CellType::Water).base_color, generation: 0, temp: 20.0 });},
                 _ => (),
             }
         }
