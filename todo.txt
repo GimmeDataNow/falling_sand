@@ -1,0 +1,29 @@
+V1 from 16.02.2023+:
++ fix get_coordinates() in space.rs
++ find out wtf is causing overfow (SO suggest it has somezhing to do with vec and index 0) >>>>> it has to do with the self.gen and its u32 limit
++ find out why simulation_space.update_cell_behaviour() is only running once, once the window closes >>>> inputs are collected and not printed until the event_loop closes >>>> maybe cause of generation? >>> move_granular() at faults with u32 = 0 - 1
++ find out why  world.rs::108 is not triggering >>> no clue but fixed?
+~ get Logical Pos from mousepos >>> only the fucked version is available >>> partial fix in V3
++ fix sand and gravel swapping in the density check >>> forgot to invoke check_sides() >>> that section is really messy ...
++ fix the crashes due to out of bounds >>> prob need to switch to i32 form u32 >>> in V2 >>> fixed in V3
++ why does CellType::Rock not crash the programm but CellType::Wood does wtf?? >>> no clue but somehow fixed
+
+V2 from 19.02.2023+:
++ fix try_diagonally not working >>> needed to fix out of bounds
++ fixed crashes due to out of bounds from V1 >>> introduced out of bounds detection
++ fix liquids only moving left >>> issue was the update order along with the condition if self.cell_needs_updating(j)
+- make the liquids more liquidy and clean up the try_move_liquid()
++ fix and improve try_move_diagonally()
++ fix self.try_move_sideways(i) not triggering even if conditions are met >>> due to imprper return type of try_move_diagonally()
++ fix improper return bool of try_move_diagonally()
++ add gasses
+- fix improper try_move_diagonally() return (again) >>> dik what causes this
+
+22.02.2023 cells_layer is done but needs improvements
+22.02.2023 started on player_layer
+
+02.06.2023 i resumed parial development
+
+V3 from 02.06.2023+:
++ redid some of the cells_layer code (specifically the check_sides function)
+- broke movement based on density difference
