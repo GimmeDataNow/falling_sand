@@ -174,6 +174,7 @@ impl Space {
                 rgba = [0xFF, 0x0, 0x0, 0xFF];
             }
 
+
             pixel.copy_from_slice(&rgba);
         }
     }
