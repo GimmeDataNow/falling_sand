@@ -129,7 +129,7 @@ fn main() -> Result<(), Error> {
                         
                         if input.key_pressed(VirtualKeyCode::P) { counter += 1 }
                         if TOGGLE_DESCRIPTOR && simulation_space.index_inbounds(i) {
-                            let a = simulation_space.cells[i as usize].get_properties().name;
+                            let a = simulation_space.cells[i as usize].get_cell_properties().name;
                             
                             
                             let b = cells_layer::CellTypeProperties::get_cell_by_number(&counter);
@@ -143,7 +143,7 @@ fn main() -> Result<(), Error> {
                                 ).ok();
                             }
                             
-                            print!("The selected Material is {} | You are looking at {}                                          \r",b.1, a);
+                            // print!("The selected Material is {} | You are looking at {}                                          \r",b.1, a);
                         }
                         
                     },
@@ -152,10 +152,10 @@ fn main() -> Result<(), Error> {
             }
 
 
-            player.player_movement(&simulation_space, &input);
+            // player.player_movement(&simulation_space, &input);
             pixels.get_frame_mut();
-            // simulation_space.update_cell_behaviour();
-            // simulation_space.update_cell_alchemy();
+            simulation_space.update_cell_behaviour();
+            simulation_space.update_cell_alchemy();
             window.request_redraw();
 
             //println!("{:?}", bt);

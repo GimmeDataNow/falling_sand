@@ -2,7 +2,6 @@ use std::{usize, isize};
 
 // imports:
 use rand::Rng;
-use debug_print::debug_print;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -135,7 +134,7 @@ impl Cell {
 
     /// # Functionality:
     /// returns the CellTypeProperties struct with respect to the CellType
-    pub fn get_properties<'a>(&self) -> &'a CellTypeProperties { CellTypeProperties::get_cell_properties(self.cell_type) }
+    pub fn get_cell_properties<'a>(&self) -> &'a CellTypeProperties { CellTypeProperties::get_cell_properties(self.cell_type) }
 }
 
 /// # Functionality:
@@ -240,8 +239,33 @@ impl Space {
     /// if i < 0 || i > self.lenght as isize - 1 { return false }
     /// return true;
     /// ```
-    pub fn index_inbounds(&mut self, i: isize) -> bool{
+    pub fn index_inbounds(&self, i: isize) -> bool{
         i > 0 && i < self.lenght as isize - 1
+    }
+
+    /// # Functionality:
+    /// Returns the ```CellTypeProperties``` after validating if the index is inbounds
+    /// # Panic behaviour:
+    /// Return ```CustomErrors::OutOfBounds``` if the function fails
+    pub fn get_properties_checked(&self, i: isize) -> Result<&CellTypeProperties, CustomErrors> {
+        if !self.index_inbounds(i) { return Err(CustomErrors::OutOfBounds) }
+        Ok(&self.cells[i as usize].get_cell_properties())
+    }
+
+    /// # Functionality:
+    /// Checks if the density of i is greater than j
+    /// # Panic behaviour:
+    /// Return ```CustomErrors::OutOfBounds``` if the function fails
+    pub fn compare_density(&self, i:isize , j: isize) -> Result<bool, CustomErrors> {
+        Ok(self.get_properties_checked(i)?.density > self.get_properties_checked(j)?.density)
+    }
+    
+    /// # Functionality:
+    /// Checks if i is not ```StateOfAggregation::ImmovableSolid``` and ```StateOfAggregation::Granular```
+    /// # Panic behaviour:
+    /// Return ```CustomErrors::OutOfBounds``` if the function fails
+    pub fn is_solid(&self, i: isize) -> Result<bool, CustomErrors> {
+        Ok(self.get_properties_checked(i)?.state == StateOfAggregation::Granular || self.get_properties_checked(i)?.state == StateOfAggregation::ImmovableSolid)
     }
 
     /// # Functionality:
@@ -311,7 +335,7 @@ impl Space {
             if self.cell_needs_updating(i) {
                 
                 // match the cell type of index i to it's behavior
-                match self.cells[i].get_properties().state {
+                match self.cells[i].get_cell_properties().state {
 
                     // skip as there is nothing to do
                     StateOfAggregation::ImmovableSolid => (),
@@ -351,24 +375,22 @@ impl Space {
         match self.get_index_checked(xy.0, xy.1 + dy) {
             Ok(j) =>{
 
-                    //check if both coordinates are inbounds
-                    // once used: if !self.index_inbounds(i) { return false }
-                    if !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
-                    
-                    // assign vars that are the converted indexes
-                    let ii = i as usize;
-                    let jj = j as usize;
-
-                    // compares the densites of the materials and checks if its an immovable solid
-                    if self.cells[ii].get_properties().density > self.cells[jj].get_properties().density && self.cells[jj].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[jj].get_properties().state != StateOfAggregation::Granular {
-                        self.swap_cells(i, j);
-                    }
-                    else {
-                        return Err(CustomErrors::OutOfBounds);
-                    }
-                    
+                //check if both coordinates are inbounds
+                // once used: if !self.index_inbounds(i) { return false }
+                if !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
+                
+                // assign vars that are the converted indexes
+                let ii = i as usize;
+                let jj = j as usize;
+                // compares the densites of the materials and checks if its an immovable solid
+                if self.compare_density(i, j)? && !self.is_solid(i)? {
+                    self.swap_cells(i, j);
+                }
+                else { return Err(CustomErrors::OutOfBounds) }
+                
                 Ok(true)
                 },
+
             Err(CustomErrors::OutOfBounds) => Err(CustomErrors::OutOfBounds),
             Err(_) => Err(CustomErrors::UndefinedBehavior)
         }
@@ -386,12 +408,12 @@ impl Space {
         let i_right = self.index_inbounds(i + 1);
 
         // left side (i - 1)
-        let left = i_left && self.cells[(i - 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[i as usize].get_properties().state != StateOfAggregation::Granular;
-        let left_less_dense = i_left &&self.cells[(i - 1) as usize].get_properties().density < self.cells[i as usize].get_properties().density;
+        let left = i_left && self.get_properties_checked(i - 1).unwrap().state != StateOfAggregation::ImmovableSolid;
+        let left_less_dense = i_left && self.cells[(i - 1) as usize].get_cell_properties().density < self.cells[i as usize].get_cell_properties().density && self.cells[(i - 1) as usize].get_cell_properties().state != StateOfAggregation::Granular;
 
         // right side (i + 1)
-        let right = i_right && self.cells[(i + 1) as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[i as usize].get_properties().state != StateOfAggregation::Granular;
-        let right_less_dense = i_right &&self.cells[(i + 1) as usize].get_properties().density < self.cells[i as usize].get_properties().density;
+        let right = i_right && self.cells[(i + 1) as usize].get_cell_properties().state != StateOfAggregation::ImmovableSolid;
+        let right_less_dense = i_right && self.cells[(i + 1) as usize].get_cell_properties().density < self.cells[i as usize].get_cell_properties().density && self.cells[(i + 1) as usize].get_cell_properties().state != StateOfAggregation::Granular;
 
         // return
         [left, left_less_dense, right, right_less_dense]
@@ -424,7 +446,7 @@ impl Space {
         // else { can_move = [same_level_array[0] && offset_level_array[0], same_level_array[2] && offset_level_array[2]];}
         let can_move = if density_based {[same_level_array[0] && offset_level_array[0] && same_level_array[1] && offset_level_array[1], same_level_array[2] && offset_level_array[2] && same_level_array[3] && offset_level_array[3]]} 
             else {[same_level_array[0] && offset_level_array[0], same_level_array[2] && offset_level_array[2]]};
-
+        
         // swap based on rand_bool to randomise the resulting swap
         if rand_bool {
             if can_move[0] {
@@ -446,7 +468,6 @@ impl Space {
         }
 
         //if anyting errors then his is undefined behavior
-        debug_print!("{:#?}", CustomErrors::UndefinedBehavior);
         Err(CustomErrors::UndefinedBehavior)
     }
 
@@ -490,7 +511,6 @@ impl Space {
             self.swap_cells(i, i - 1);
             return Ok(true);
         }
-        debug_print!("{:#?}", CustomErrors::UndefinedBehavior);
         Err(CustomErrors::UndefinedBehavior)
     }
 
@@ -517,17 +537,7 @@ impl Space {
         self.try_move_sideways(i, density_based).ok();
     }
 
-    pub fn is_solid(&self, position: (i32, i32)) -> bool {
-        match self.get_index_checked(position.0 , position.1 ){
-            Ok(i) => {
-                if self.cells[i as usize].get_properties().state != StateOfAggregation::ImmovableSolid && self.cells[i as usize].get_properties().state != StateOfAggregation::Granular{
-                    return true;
-                }
-                false
-            },
-            Err(_) => false,
-        }
-    }
+    
     pub fn update_cell_alchemy(&mut self) {
         for i in 0..(self.lenght - 1) as usize {
             match self.cells[i].cell_type {
