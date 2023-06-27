@@ -143,7 +143,7 @@ fn main() -> Result<(), Error> {
                                 ).ok();
                             }
                             
-                            // print!("The selected Material is {} | You are looking at {}                                          \r",b.1, a);
+                            //print!("The selected Material is {} | You are looking at {}                                          \r",b.1, a);
                         }
                         
                     },
