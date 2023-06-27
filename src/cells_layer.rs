@@ -368,14 +368,19 @@ impl Space {
         let dy:isize = if gravity_normal {self.width as isize} else {-self.width as isize};
         let j = i + dy;
         
+        if !self.index_inbounds(j) { return false }
+        
+        // println!("{}", !self.is_solid(j).unwrap_or(false));
         if !self.is_solid(j).unwrap_or(false) {
-            if !self.index_inbounds(j) { return false }
+            println!("{}",self.compare_density(i, j).unwrap_or(false));
             if density_based && self.compare_density(i, j).unwrap_or(false) {
                 self.swap_cells(i, j);
                 return true;
             }
-            self.swap_cells(i, j);
-            return true;
+            if !density_based {
+                self.swap_cells(i, j);
+                return true;
+            }
         }
         false
     }
@@ -396,7 +401,7 @@ impl Space {
         let right_less_dense = self.compare_density(i, right_pos).unwrap_or(false);
 
         // return
-        println!("{:#?} \n", [left, left_less_dense, right, right_less_dense]);
+        //println!("{:#?} \n", [left, left_less_dense, right, right_less_dense]);
         [left, left_less_dense, right, right_less_dense]
     }
     
@@ -525,4 +530,13 @@ impl Space {
             }
         }
     }
+}
+
+pub fn compare_arrays_4(a: [bool; 4], b: [bool; 4]) -> [bool; 4] {
+    [
+        a[0] && b[0],
+        a[1] && b[1],
+        a[2] && b[2],
+        a[3] && b[3]
+    ]
 }
