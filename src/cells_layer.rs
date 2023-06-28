@@ -159,7 +159,7 @@ pub struct Space {
 
 impl Space {
     /// # Functionality:
-    /// Creates a new simulation space with dimensions ```width * height``` and thus an ```index i``` of ```width * height = lenght```
+    /// Creates a new simulation space with dimentions ```width * height``` and thus an ```index i``` of ```width * height = lenght```
     /// # Panic behaviour:
     /// panics if ```width < 0``` or ```height < 0```
     pub fn new(width: i32, height: i32) -> Self {
@@ -178,7 +178,7 @@ impl Space {
     /// # Functionality:
     /// Increments the simulation space's generation by one
     /// # Panic behaviour:
-    /// This function will sometimes error due to ```arithmetic_overflow```, this is dependant on the unsigned intiger size.
+    /// This function will sometimes error due to ```arithmetic_overflow```, this is dependant on the maximum size of ```self.generation```.
     /// 
     /// If ```Space``` has a genation counter with the size of u8, then the application will error very quickly.
     #[allow(arithmetic_overflow)]
@@ -236,7 +236,7 @@ impl Space {
     /// Checks if the index is within bounds. returns ```false``` if the index is not inbounds
     /// # Formula:
     /// ```
-    /// if i < 0 || i > self.lenght as isize - 1 { return false }
+    /// i > 0 && i < self.lenght as isize - 1
     /// return true;
     /// ```
     pub fn index_inbounds(&self, i: isize) -> bool {
@@ -261,7 +261,7 @@ impl Space {
     }
     
     /// # Functionality:
-    /// Checks if i is not ```StateOfAggregation::ImmovableSolid``` and ```StateOfAggregation::Granular```
+    /// Checks if i is ```not``` ```StateOfAggregation::ImmovableSolid``` and ```StateOfAggregation::Granular```
     /// # Panic behaviour:
     /// Return ```CustomErrors::OutOfBounds``` if the function fails
     pub fn is_solid(&self, i: isize) -> Result<bool, CustomErrors> {
@@ -300,7 +300,7 @@ impl Space {
     }
     
     /// # Functionality:
-    /// Sets a cell to a specific type, checks for 
+    /// Sets a cell to a specific type, checks for ```self.index_inbounds()```
     /// # Behaviour:
     /// May cause a cell to wait too long to update, due to ```self.cells[i].generation = self.generation```
     /// # Panic behaviour:
@@ -446,7 +446,7 @@ impl Space {
             return Ok(true);
         }
         
-        //if anyting errors then his is undefined behavior
+        //if anyting errors then this is undefined behavior
         Err(CustomErrors::CouldNotComplete)
     }
 
