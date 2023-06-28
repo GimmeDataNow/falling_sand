@@ -239,8 +239,8 @@ impl Space {
     /// if i < 0 || i > self.lenght as isize - 1 { return false }
     /// return true;
     /// ```
-    pub fn index_inbounds(&self, i: isize) -> bool{
-        i > 0 && i < self.lenght as isize - 1
+    pub fn index_inbounds(&self, i: isize) -> bool {
+        i > 0 && i < self.lenght as isize
     }
 
     /// # Functionality:
@@ -329,7 +329,7 @@ impl Space {
     pub fn update_cell_behaviour(&mut self) {
 
         // iterate trough all elements of the Vec
-        for i in 0..(self.lenght - 1) as usize {
+        for i in 0..(self.lenght) as usize {
 
             // needs to check if the cell needs updating
             if self.cell_needs_updating(i) {
