@@ -102,24 +102,17 @@ fn main() -> Result<(), Error> {
                 match simulation_space.get_index_checked(mouse_pos.0, mouse_pos.1) {
                     Ok(i) => {
                         if input.mouse_held(1) { 
-                            simulation_space.set_cell_checked(
-                                i as usize,  
-                            &cells_layer::Cell { 
-                                    cell_type: cells_layer::CellType::Sand, 
-                                    color: cells_layer::CellTypeProperties::get_cell_properties(cells_layer::CellType::Sand).base_color, 
-                                    generation: 0, 
-                                    temp: 20.0}
-                            ).ok();
+                            simulation_space.paint_bush(mouse_pos, 5, cells_layer::CellType::Sand, cells_layer::BrushType::Circle);
                         }
                         
 
                         if input.mouse_held(2) { 
                             let a = cells_layer::CellTypeProperties::rand_cell_properties();
-                            simulation_space.set_cell_checked(i as usize, &cells_layer::Cell { 
+                            simulation_space.set_cell_checked(i, &cells_layer::Cell { 
                                 cell_type: a.cell_type, 
                                 color: a.base_color, 
                                 generation: 0, 
-                                temp: 20.0 
+                                temp: 298 
                             }).ok();
                         }
                         if input.key_pressed(VirtualKeyCode::Return) {
@@ -137,11 +130,11 @@ fn main() -> Result<(), Error> {
                             
                             let b = cells_layer::CellTypeProperties::get_cell_by_number(&counter);
                             if input.mouse_held(0) { 
-                                simulation_space.set_cell_checked(i as usize, &cells_layer::Cell { 
+                                simulation_space.set_cell_checked(i, &cells_layer::Cell { 
                                     cell_type: b.0, 
                                     color: cells_layer::CellTypeProperties::get_cell_properties(b.0).base_color, 
                                     generation: 0, 
-                                    temp: 20.0
+                                    temp: 298
                                     }
                                 ).ok();
                             }

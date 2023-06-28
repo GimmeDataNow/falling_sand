@@ -44,6 +44,15 @@ pub enum StateOfAggregation {
 }
 
 /// # Functionality:
+/// This enum dictates what shape the ```paint_brush()``` function should assume
+/// # Options:
+/// The options of ```BrushType``` are: ```Square```, ```Circle```
+pub enum BrushType {
+    Square,
+    Circle
+}
+
+/// # Functionality:
 /// This struct dictates the structure and information of the look-up-array ```CELL_PROPERTIES```, which inturn dictates material behavior. ```base_temp``` is measured in ```Kelvin```
 /// # Structure:
 /// ```
@@ -84,7 +93,7 @@ static CELL_PROPERTIES: [CellTypeProperties; 11] = [
     CellTypeProperties { name: "Gunpowder", cell_type: CellType::Gunpowder, state: StateOfAggregation::Granular,        density: 1.7,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [70, 70,    80, 255] },
     CellTypeProperties { name: "Oil",       cell_type: CellType::Oil,       state: StateOfAggregation::Liquid,          density: 0.9,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [55, 58,    54, 255] },
     CellTypeProperties { name: "Lava",      cell_type: CellType::Lava,      state: StateOfAggregation::Liquid,          density: 3.1,   temp_coefficient: 100.0,    flammable: false, base_temp: 298,   base_color: [255, 0,    0, 255] },
-    CellTypeProperties { name: "Acid",      cell_type: CellType::Acid,      state: StateOfAggregation::Liquid,          density: 1.4,  temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0,   255,  0, 255] },
+    CellTypeProperties { name: "Acid",      cell_type: CellType::Acid,      state: StateOfAggregation::Liquid,          density: 1.4,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0,   255,  0, 255] },
 ];
 
 impl CellTypeProperties {
@@ -123,18 +132,32 @@ pub struct Cell {
     pub cell_type: CellType,
     pub color: [u8; 4],
     pub generation: u32,
-    pub temp: f32,
+    pub temp: u16,
 }
 
 impl Cell {
 
     /// # Functionality:
     /// sets the cell to be air
-    pub fn set_air() -> Cell { Cell { cell_type: CellType::Air, generation: 0, color: [0; 4], temp: 28.0 } }
+    pub fn set_air() -> Cell { Cell { cell_type: CellType::Air, generation: 0, color: [0; 4], temp: 298 } }
 
     /// # Functionality:
     /// returns the CellTypeProperties struct with respect to the CellType
     pub fn get_cell_properties<'a>(&self) -> &'a CellTypeProperties { CellTypeProperties::get_cell_properties(self.cell_type) }
+
+    pub fn build_cell(cell_type: CellType) -> Cell {
+
+        //this is the cell properties that will be used to build the cell
+        let ref_cell_properties = CellTypeProperties::get_cell_properties(cell_type);
+        
+        //this is the cell that will be returned
+        Cell { 
+            cell_type: ref_cell_properties.cell_type,
+            generation: 0, 
+            color: ref_cell_properties.base_color, 
+            temp: ref_cell_properties.base_temp,  
+        }
+    }
 }
 
 /// # Functionality:
@@ -308,19 +331,50 @@ impl Space {
     /// May cause a cell to wait too long to update, due to ```self.cells[i].generation = self.generation```
     /// # Panic behaviour:
     /// Panics if ```i < 0```
-    pub fn set_cell_checked(&mut self, i: usize, cell: &Cell) -> Result<bool, CustomErrors> {
+    pub fn set_cell_checked(&mut self, i: isize, cell: &Cell) -> Result<bool, CustomErrors> {
 
         // check the index
-        if !self.index_inbounds(i as isize) { return Err(CustomErrors::OutOfBounds) }
+        if !self.index_inbounds(i) { return Err(CustomErrors::OutOfBounds) }
 
         // replace the cell
-        self.cells[i] = *cell;
+        self.cells[i as usize] = *cell;
 
         //mark it as updated
-        self.cells[i].generation = self.generation;
+        self.cells[i as usize].generation = self.generation;
 
         // mark it as done
         Ok(true)
+    }
+
+    pub fn paint_bush(&mut self, mouse_pos: (i32, i32), brush_radius: i32, brush_material: CellType, brush_type: BrushType) {
+        // convert mouse position tuple into two strandalone numbers
+        let (x, y) = mouse_pos;
+
+        // iterate through the x coordinates
+        for dx in -brush_radius..=brush_radius {
+
+            // iterate through the y coordinates
+            for dy in -brush_radius..=brush_radius {
+
+                // get the index of the mouse position
+                let i = self.get_index(x + dx, y + dy);
+
+                // this handles the cell material
+                let cell = &Cell::build_cell(brush_material);
+
+                match (self.index_inbounds(i), &brush_type) {
+
+                    // ignore all cases where the index is out of bounds
+                    (false, _) => false,
+
+                    //standard square brush
+                    (true, BrushType::Square) => self.set_cell_checked(i,cell).unwrap_or(false),
+
+                    // i don't know why but this is the best way to do it, because for some reason the compiler doesn't allow for it to be written as dx^2 or dx.abs()^2
+                    (true, BrushType::Circle) => { if dx*dx + dy*dy <= brush_radius*brush_radius { self.set_cell_checked(i,cell).unwrap_or(false) } else { false } },
+                };
+            }
+        }
     }
 
     /// # Functionality:
@@ -332,7 +386,7 @@ impl Space {
     pub fn update_cell_behaviour(&mut self) {
 
         // iterate trough all elements of the Vec
-        for i in 0..(self.lenght) as usize {
+        for i in 0..(self.lenght as usize) {
 
             // needs to check if the cell needs updating
             if self.cell_needs_updating(i) {
@@ -357,6 +411,7 @@ impl Space {
                 self.update_cell_generation(i);   
             }
         }
+        
         // mark the space as updated and allow it to be updated again in the next iteration
         self.increment_generation()
     }
@@ -372,21 +427,26 @@ impl Space {
         // turns the gravity_normal bool into something more usable
         let j = if gravity_normal { i + self.width as isize } else { i - self.width as isize };
 
+        // check if the index is inbounds
         if !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
         
-        // println!("{}", !self.is_solid(j).unwrap_or(false));
+        // checks if the cell is not solid
         if !self.is_solid(j)? {
 
+            // checks if the swap is density based and checks if the index i has a higher density than the index j
             if density_based && self.compare_density(i, j)? {
                 self.swap_cells(i, j);
                 return Ok(true);
             }
+            // another boolean check to ensure that the code is only executed if the cell is not density based 
             if !density_based {
                 self.swap_cells(i, j);
                 return Ok(true);
             }
         }
-       Err(CustomErrors::UndefinedBehavior)
+
+        // if the code gets here, then this is undefined behavior
+        Err(CustomErrors::UndefinedBehavior)
     }
     
     /// # Functionality:
@@ -396,11 +456,15 @@ impl Space {
     /// Then test for ```index_inbounds``` && ```density difference```
     pub fn compare_sides(&mut self, ref_cell: isize, i: isize) -> [bool; 4] {
 
+        // these are the indices of the cells that will be checked
         let left_pos = i - 1;
         let right_pos = i + 1;
 
+        // check if the cell is not solid
         let left = !self.is_solid(left_pos).unwrap_or(true);
         let right = !self.is_solid(right_pos).unwrap_or(true);
+
+        // compare the density of the cells ref_cell and right_pos/left_pos
         let left_less_dense = self.compare_density(ref_cell, left_pos).unwrap_or(false);
         let right_less_dense = self.compare_density(ref_cell, right_pos).unwrap_or(false);
 
@@ -412,7 +476,7 @@ impl Space {
         // random bool to decide the direction of movement
         let rand_bool = rand::random::<bool>();
 
-        //series of checks to move the cell
+        // series of checks to move the cell
         // TODO: make this more robust and more efficient (i.e. reduce complexity)
         if rand_bool {
             if can_move[0] {
@@ -433,9 +497,10 @@ impl Space {
             return Ok(true);
         }
 
-        //throw an error if this code is reached
+        // throw an error if this code is reached
         Err(CustomErrors::OutOfBounds)
     }
+
     /// # Functionality:
     /// Checks if a cell is air or if the cell is not an ```ImmovableSolid```, and then it compares densities
     /// # Structure:
@@ -453,6 +518,7 @@ impl Space {
         let offset_level_array = self.compare_sides(i, j);
         let a = compare_arrays_4(same_level_array, offset_level_array);
         
+        // merges the boolean arrays based on the density_based bool
         let can_move = if density_based { [a[0] && a[1], a[2] && a[3]]} else {[a[0], a[2]]};
 
         // swap based on rand_bool to randomise the resulting swap
@@ -487,28 +553,34 @@ impl Space {
     }
 
     /// # Functionality:
-    /// First the fuction tries to move a cell vertically. Then the fuction tries to move a cell diagonally. Should the function fail it returns false
+    /// Simulates the movement of a cell assuming a state of aggregation of ```StateOfAggregation::Granular```
     /// # Behaviour:
-    /// Tries to mimik movement of granular materials by first checking below itself. And only if it can't move down it will try to move diagonally
+    /// Tries to mimic movement of granular materials by first checking below itself. And only if it can't move down it will try to move diagonally
     /// # Structure:
-    /// first checks ```self.try_move_vert()``` and then ```self.try_move_diagonally()```
+    /// First checks ```self.try_move_vert()``` and then ```self.try_move_diagonally()```
     pub fn move_granular(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
         if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
         self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false)
     }
 
     /// # Functionality:
-    /// Checks if a cell is air or if the cell is not an ImmovableSolid, and then it compares densities
+    /// Simulates the movement of a cell assuming a state of aggregation of ```StateOfAggregation::Liquid```
     /// # Behaviour:
-    /// Tries to mimik movement of granular materials by first checking below itself. And only if it can't move down it will try to move diagonally
+    /// Tries to mimic movement of liquid materials by first checking below itself. And only if it can't move down it will try to move diagonally. Should that too fail will it try to move sideways
     /// # Structure:
-    /// first checks self.try_move_vert() and then self.try_move_diagonally()
+    /// First checks ```self.try_move_vert()``` then ```self.try_move_diagonally()``` and then ```self.try_move_sideways()```
     pub fn move_liquid(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
         if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
         if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
         self.try_move_sideways(i, density_based).unwrap_or(false)
     }
 
+    /// # Functionality:
+    /// Simulates the movement of a cell assuming a state of aggregation of ```StateOfAggregation::Gas```
+    /// # Behaviour:
+    /// Tries to mimic movement of liquid materials by first checking below itself. And only if it can't move up it will try to move diagonally. Should that too fail will it try to move sideways
+    /// # Structure:
+    /// First checks ```self.try_move_vert()``` then ```self.try_move_diagonally()``` and then ```self.try_move_sideways()```
     pub fn move_gas(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
         if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
         if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
@@ -522,9 +594,12 @@ impl Space {
     pub fn update_cell_alchemy(&mut self) {
         for i in 0..(self.lenght - 1) as usize {
             match self.cells[i].cell_type {
+
                 // change the rng range for different probabilities
                 // ignore the safety checks since i is already in range
-                CellType::Steam => if rand::thread_rng().gen_range(1..=1250) < 2 { self.set_cell(i, &Cell { cell_type: CellType::Water, color: CellTypeProperties::get_cell_properties(CellType::Water).base_color, generation: 0, temp: 20.0 });},
+                CellType::Steam => if rand::thread_rng().gen_range(1..=1250) < 2 { self.set_cell(i, &Cell { cell_type: CellType::Water, color: CellTypeProperties::get_cell_properties(CellType::Water).base_color, generation: 0, temp: 298 });},
+
+                // discard all else
                 _ => (),
             }
         }
