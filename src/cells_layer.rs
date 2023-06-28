@@ -446,7 +446,7 @@ impl Space {
             return Ok(true);
         }
         
-        //if anyting errors then his is undefined behavior
+        //if anyting errors then this is undefined behavior
         Err(CustomErrors::CouldNotComplete)
     }
 
