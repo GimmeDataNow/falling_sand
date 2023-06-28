@@ -29,7 +29,7 @@ const SCALE: f32 = 5.0;
 const TOGGLE_DESCRIPTOR:bool = true;
 
 fn main() -> Result<(), Error> {
-
+    let mut step_by_frame = false;
     // debug section
 
     // env::set_var("RUST_BACKTRACE", "full");
@@ -122,6 +122,9 @@ fn main() -> Result<(), Error> {
                                 temp: 20.0 
                             }).ok();
                         }
+                        if input.key_pressed(VirtualKeyCode::Return) {
+                            step_by_frame = !step_by_frame;
+                        }
                         if input.key_pressed(VirtualKeyCode::Space) {
                             simulation_space.update_cell_behaviour();
                             simulation_space.update_cell_alchemy();
@@ -154,8 +157,10 @@ fn main() -> Result<(), Error> {
 
             // player.player_movement(&simulation_space, &input);
             pixels.get_frame_mut();
-            simulation_space.update_cell_behaviour();
-            simulation_space.update_cell_alchemy();
+            if !step_by_frame {
+                simulation_space.update_cell_behaviour();
+                simulation_space.update_cell_alchemy();
+            }
             window.request_redraw();
 
             //println!("{:?}", bt);

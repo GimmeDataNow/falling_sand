@@ -365,14 +365,13 @@ impl Space {
     pub fn try_move_vert(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
 
         // turns the gravity_normal bool into something more usable
-        let dy:isize = if gravity_normal {self.width as isize} else {-self.width as isize};
-        let j = i + dy;
-        
+        let j = if gravity_normal { i + self.width as isize } else { i - self.width as isize };
+
         if !self.index_inbounds(j) { return false }
         
         // println!("{}", !self.is_solid(j).unwrap_or(false));
         if !self.is_solid(j).unwrap_or(false) {
-            println!("{}",self.compare_density(i, j).unwrap_or(false));
+
             if density_based && self.compare_density(i, j).unwrap_or(false) {
                 self.swap_cells(i, j);
                 return true;
@@ -390,18 +389,17 @@ impl Space {
     /// # Structure:
     /// test for ```index_inbounds()``` && ```boundary detetection``` && ```non-ImmovableSolid```. 
     /// Then test for ```index_inbounds``` && ```density difference```
-    pub fn check_sides(&mut self, i: isize) -> [bool; 4] {
+    pub fn compare_sides(&mut self, ref_cell: isize, i: isize) -> [bool; 4] {
 
         let left_pos = i - 1;
         let right_pos = i + 1;
 
         let left = !self.is_solid(left_pos).unwrap_or(true);
         let right = !self.is_solid(right_pos).unwrap_or(true);
-        let left_less_dense = self.compare_density(i, left_pos).unwrap_or(false);
-        let right_less_dense = self.compare_density(i, right_pos).unwrap_or(false);
+        let left_less_dense = self.compare_density(ref_cell, left_pos).unwrap_or(false);
+        let right_less_dense = self.compare_density(ref_cell, right_pos).unwrap_or(false);
 
         // return
-        //println!("{:#?} \n", [left, left_less_dense, right, right_less_dense]);
         [left, left_less_dense, right, right_less_dense]
     }
     
@@ -409,48 +407,47 @@ impl Space {
     /// Checks if a cell is air or if the cell is not an ```ImmovableSolid```, and then it compares densities
     /// # Structure:
     /// first checks if cells to the left and right and the ones below and afterwards checks for density if ```density_based == true```
-    pub fn try_move_diagonally(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
+    pub fn try_move_diagonally(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> Result<bool, CustomErrors> {
 
         // turns the gravity_normal bool into something more usable
-        let dy:i32 = if gravity_normal { 1 } else { -1 };
 
         // handle index i and j. Check self.index_inbounds(i) and self.index_inbounds(j)
-        let j = i + (dy * self.height) as isize;
-        if !self.index_inbounds(i) || !self.index_inbounds(j) { return false }
+        let j = if gravity_normal { i + self.width as isize } else { i - self.width as isize };
+        if !self.index_inbounds(i) || !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
         
         // make a new rand_bool that decides bias of swap order
         let rand_bool = rand::random::<bool>();
 
-        
         // left, density, right, density
-        let same_level_array = self.check_sides(i);
-        let offset_level_array = self.check_sides(j);
-
-        let can_move = if density_based {[same_level_array[0] && offset_level_array[0] && same_level_array[1] && offset_level_array[1], same_level_array[2] && offset_level_array[2] && same_level_array[3] && offset_level_array[3]]} 
-            else {[same_level_array[0] && offset_level_array[0], same_level_array[2] && offset_level_array[2]]};
+        let same_level_array = self.compare_sides(i, i);
+        let offset_level_array = self.compare_sides(i, j);
+        // println!("{:?}", offset_level_array);
+        let a = compare_arrays_4(same_level_array, offset_level_array);
+        
+        let can_move = if density_based { [a[0] && a[1], a[2] && a[3]]} else {[a[0], a[2]]};
 
         // swap based on rand_bool to randomise the resulting swap
         if rand_bool {
             if can_move[0] {
                 self.swap_cells(i, j - 1);
-                return true;
+                return Ok(true);
             }
             else if can_move[1] {
                 self.swap_cells(i, j + 1);
-                return true;
+                return Ok(true);
             }
         }
         else if can_move[1] {
             self.swap_cells(i, j + 1);
-            return true;
+            return Ok(true);
         }
         else if can_move[0] {
             self.swap_cells(i, j - 1);
-            return true;
+            return Ok(true);
         }
         
         //if anyting errors then his is undefined behavior
-        false
+        Err(CustomErrors::CouldNotComplete)
     }
 
     /// # Functionality:
@@ -460,12 +457,12 @@ impl Space {
     pub fn try_move_sideways(&mut self, i: isize, density_based: bool) -> bool {
 
         // create variables for further processing
-        let same_level = self.check_sides(i);
+        let same_level = self.compare_sides(i, i);
         let rand_bool = rand::random::<bool>();
 
         // accounts for the density_based bool
         let can_move_left_and_right = if density_based {
-            ( same_level[0] && same_level[1], same_level[2] && same_level[3] )
+            (same_level[0] && same_level[1], same_level[2] && same_level[3])
         }
         else { 
             (same_level[0], same_level[2]) 
@@ -504,18 +501,18 @@ impl Space {
     /// first checks self.try_move_vert() and then self.try_move_diagonally()
     pub fn move_granular(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
         if self.try_move_vert(i, gravity_normal, density_based) { return true }
-        self.try_move_diagonally(i, gravity_normal, density_based)
+        self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false)
     }
 
     pub fn move_liquid(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
         if self.try_move_vert(i, gravity_normal, density_based) { return true }
-        if self.try_move_diagonally(i, gravity_normal, density_based) { return true }
+        if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
         self.try_move_sideways(i, density_based)
     }
 
     pub fn move_gas(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
         if self.try_move_vert(i, gravity_normal, density_based) { return true }
-        if self.try_move_diagonally(i, gravity_normal, density_based) { return true }
+        if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
         self.try_move_sideways(i, density_based)
     }
 

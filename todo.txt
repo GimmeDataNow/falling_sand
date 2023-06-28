@@ -28,3 +28,4 @@ V3 from 02.06.2023+:
 + redid some of the cells_layer code (specifically the check_sides function)
 + error propegation
 - broke movement based on density difference
+- liquids mostly fixed, but if many are simulated then errors may occur
