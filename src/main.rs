@@ -60,7 +60,7 @@ fn main() -> Result<(), Error> {
 
     // this is where the magic starts
     let mut simulation_space = cells_layer::Space::new(WIDTH, HEIGHT);
-    let mut player = player_layer::PlayerState::new((0, 0),100);
+    let player = player_layer::PlayerState::new((0, 0),100);
     let mut counter:usize = 0;
     event_loop.run(move |event, _, control_flow| {
         
@@ -101,48 +101,38 @@ fn main() -> Result<(), Error> {
                 #[allow(unused_parens)]
                 match simulation_space.get_index_checked(mouse_pos.0, mouse_pos.1) {
                     Ok(i) => {
-                        if input.mouse_held(1) { 
-                            simulation_space.paint_bush(mouse_pos, 5, cells_layer::CellType::Sand, cells_layer::BrushType::Circle);
-                        }
                         
+                        if input.mouse_held(1) {  simulation_space.paint_bush(mouse_pos, 5, cells_layer::CellType::Sand, cells_layer::BrushType::Circle) }
 
                         if input.mouse_held(2) { 
                             let a = cells_layer::CellTypeProperties::rand_cell_properties();
-                            simulation_space.set_cell_checked(i, &cells_layer::Cell { 
-                                cell_type: a.cell_type, 
-                                color: a.base_color, 
-                                generation: 0, 
-                                temp: 298 
-                            }).ok();
+                            cells_layer::Cell::build_cell(a.cell_type);
                         }
-                        if input.key_pressed(VirtualKeyCode::Return) {
-                            step_by_frame = !step_by_frame;
-                        }
+                        // toggles the step by frame mode
+                        if input.key_pressed(VirtualKeyCode::Return) { step_by_frame = !step_by_frame }
                         if input.key_pressed(VirtualKeyCode::Space) {
                             simulation_space.update_cell_behaviour();
                             simulation_space.update_cell_alchemy();
                         }
                         
+                        // move between the possible CellTypes
                         if input.key_pressed(VirtualKeyCode::P) { counter += 1 }
+
+
                         if TOGGLE_DESCRIPTOR && simulation_space.index_inbounds(i) {
                             let a = simulation_space.cells[i as usize].get_cell_properties().name;
                             
                             
-                            let b = cells_layer::CellTypeProperties::get_cell_by_number(&counter);
-                            if input.mouse_held(0) { 
-                                simulation_space.set_cell_checked(i, &cells_layer::Cell { 
-                                    cell_type: b.0, 
-                                    color: cells_layer::CellTypeProperties::get_cell_properties(b.0).base_color, 
-                                    generation: 0, 
-                                    temp: 298
-                                    }
-                                ).ok();
-                            }
+                            let b = cells_layer::CellTypeProperties::get_cell_properties_by_number(&counter);
+
+
+                            if input.mouse_held(0) { simulation_space.set_cell_checked(i, &cells_layer::Cell::build_cell(b.cell_type)).ok(); }
                             
-                            //print!("The selected Material is {} | You are looking at {}                                          \r",b.1, a);
+                            print!("The selected Material is {} | You are looking at {}                                          \r",b.name, a);
                         }
                         
                     },
+                    // discard errors
                     Err(_) => (),
                 }
             }

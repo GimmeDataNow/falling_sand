@@ -47,6 +47,7 @@ pub enum StateOfAggregation {
 /// This enum dictates what shape the ```paint_brush()``` function should assume
 /// # Options:
 /// The options of ```BrushType``` are: ```Square```, ```Circle```
+#[allow(dead_code)]
 pub enum BrushType {
     Square,
     Circle
@@ -99,30 +100,34 @@ static CELL_PROPERTIES: [CellTypeProperties; 11] = [
 impl CellTypeProperties {
 
     /// # Functionality:
-    /// This function returns a random element of the ```CELL_PROPERTIES``` array. It is not dependant on the size of ```CELL_PROPERTIES```
+    /// This function returns a random element of the ```CELL_PROPERTIES``` array. It is not dependant on the size of ```CELL_PROPERTIES```.
     /// # Panic behaviour:
-    /// Panics if the length of ```CELL_PROPERTIES < 1```
+    /// Panics if the length of ```CELL_PROPERTIES < 1```.
     #[allow(dead_code)]
     pub fn rand_cell_properties() -> CellTypeProperties{ CELL_PROPERTIES[rand::thread_rng().gen_range(0..CELL_PROPERTIES.len())] }
 
     /// # Functionality:
-    /// This is the highly imortant function that returns 
+    /// This is the highly imortant function that returns the ```&CellTypeProperties``` that other functions rely on.
     /// # Panic behaviour:
     /// Panics if the length of ```CELL_PROPERTIES < 1```
     pub fn get_cell_properties<'a>(cell_type: CellType) -> &'a CellTypeProperties { &CELL_PROPERTIES[cell_type as usize] }
 
-    pub fn get_cell_by_number(selection: &usize) -> (CellType, &'static str) {
-        let a = selection % CELL_PROPERTIES.len();
-        (CELL_PROPERTIES[a].cell_type, &CELL_PROPERTIES[a].name)
-    }
+    /// # Functionality:
+    /// This function returns the ```CellType``` of the cell based on the ```selection``` counter.
+    pub fn get_celltype_by_number(selection: &usize) -> CellType { CELL_PROPERTIES[selection % CELL_PROPERTIES.len()].cell_type }
+
+    /// # Functionality:
+    /// This function returns the ```CellTypeProperties``` of the cell based on the ```selection``` counter.
+    pub fn get_cell_properties_by_number(selection: &usize) -> CellTypeProperties { *Self::get_cell_properties(Self::get_celltype_by_number(selection)) }
 }
 
 /// # Functionality:
-/// This general cell struct that stores cell specific data, that can vary from cell to cell
+/// This general cell struct that stores cell specific data, that can vary from cell to cell.
 /// # Structure:
 /// ```
 /// pub struct Cell {
 ///     pub cell_type: CellType,
+///     pub color: [u8; 4],
 ///     pub generation: u32,
 ///     pub temp: f32,
 ///}
@@ -138,13 +143,11 @@ pub struct Cell {
 impl Cell {
 
     /// # Functionality:
-    /// sets the cell to be air
-    pub fn set_air() -> Cell { Cell { cell_type: CellType::Air, generation: 0, color: [0; 4], temp: 298 } }
-
-    /// # Functionality:
-    /// returns the CellTypeProperties struct with respect to the CellType
+    /// returns the ```CellTypeProperties``` struct with respect to the ```CellType```
     pub fn get_cell_properties<'a>(&self) -> &'a CellTypeProperties { CellTypeProperties::get_cell_properties(self.cell_type) }
 
+    /// # Functionality:
+    /// returns the ```Cell``` based on the given ```CellType```
     pub fn build_cell(cell_type: CellType) -> Cell {
 
         //this is the cell properties that will be used to build the cell
@@ -158,6 +161,10 @@ impl Cell {
             temp: ref_cell_properties.base_temp,  
         }
     }
+
+    /// # Functionality:
+    /// sets the cell to be air.
+    pub fn set_air() -> Cell { Self::build_cell(CellType::Air) }
 }
 
 /// # Functionality:
@@ -310,11 +317,11 @@ impl Space {
     }
 
     /// # Functionality:
-    /// Sets a cell to a specific type
+    /// Sets a cell to a specific type. Does not handle errors.
     /// # Behaviour:
     /// May cause a cell to wait too long to update, due to ```self.cells[i].generation = self.generation```
     /// # Panic behaviour:
-    /// Panics if ```self.index_inbounds(i) == false``` or ```self.index_inbounds(j) == false```
+    /// Panics if ```self.index_inbounds(i) == false```
     #[allow(dead_code)]
     pub fn set_cell(&mut self, i: usize, cell: &Cell) {
         
@@ -330,7 +337,7 @@ impl Space {
     /// # Behaviour:
     /// May cause a cell to wait too long to update, due to ```self.cells[i].generation = self.generation```
     /// # Panic behaviour:
-    /// Panics if ```i < 0```
+    /// Should the index i somehow reach the latter of the function skipping the error prevention, then this function will panic irrecoverably
     pub fn set_cell_checked(&mut self, i: isize, cell: &Cell) -> Result<bool, CustomErrors> {
 
         // check the index
@@ -346,6 +353,12 @@ impl Space {
         Ok(true)
     }
 
+    /// # Functionality:
+    /// This function was made to enable a paint brush tool to draw on the screen.
+    /// # Behaviour:
+    /// Reitreives the mouse position and then iterates through a square with side length of brush_size. Dependant on the brush_type this square will filled with different patterns.
+    /// # Panic behaviour:
+    /// This function cannot error as it simply ignores all errors resulting from lower function calls.
     pub fn paint_bush(&mut self, mouse_pos: (i32, i32), brush_radius: i32, brush_material: CellType, brush_type: BrushType) {
         // convert mouse position tuple into two strandalone numbers
         let (x, y) = mouse_pos;
@@ -362,6 +375,7 @@ impl Space {
                 // this handles the cell material
                 let cell = &Cell::build_cell(brush_material);
 
+                // match the brush type and the return value of the function self.index_inbounds(i)
                 match (self.index_inbounds(i), &brush_type) {
 
                     // ignore all cases where the index is out of bounds
@@ -438,6 +452,7 @@ impl Space {
                 self.swap_cells(i, j);
                 return Ok(true);
             }
+
             // another boolean check to ensure that the code is only executed if the cell is not density based 
             if !density_based {
                 self.swap_cells(i, j);
@@ -472,6 +487,12 @@ impl Space {
         [left, left_less_dense, right, right_less_dense]
     }
     
+    /// # Functionality:
+    /// This function is made to reduce the complexity of other functions. The function takes in an array of two bools, and swaps the corresponding cells.
+    /// # Structure:
+    /// It uses a random bool generator to dictate which cell to swap first. This ensures that the swaps are evenly distributed.
+    /// 
+    /// The cell i is swapped with the cell j. It assumes the ```can_move``` is based on the perspective of the cell i.
     pub fn random_move_side(&mut self, can_move: [bool; 2], i: isize, j: isize) -> Result<bool, CustomErrors> {
         // random bool to decide the direction of movement
         let rand_bool = rand::random::<bool>();
@@ -497,8 +518,8 @@ impl Space {
             return Ok(true);
         }
 
-        // throw an error if this code is reached
-        Err(CustomErrors::OutOfBounds)
+        // throw an error if this code is reached as this is undefined behavior
+        Err(CustomErrors::UndefinedBehavior)
     }
 
     /// # Functionality:
@@ -559,7 +580,12 @@ impl Space {
     /// # Structure:
     /// First checks ```self.try_move_vert()``` and then ```self.try_move_diagonally()```
     pub fn move_granular(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
+
+        // tries to move vertically and if it fails it tries the next function
         if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
+
+        // tries to move diagonally and if it fails it will do nothing
+        // there will not be any errors if this function fails, because it is unneccassary to try to handle the error later on
         self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false)
     }
 
@@ -570,8 +596,15 @@ impl Space {
     /// # Structure:
     /// First checks ```self.try_move_vert()``` then ```self.try_move_diagonally()``` and then ```self.try_move_sideways()```
     pub fn move_liquid(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
+
+        // tries to move vertically and if it fails it tries the next function
         if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
+
+        // tries to move diagonally and if it fails it tries the next function
         if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
+
+        // tries to move sideways and if it fails it will do nothing
+        // there will not be any errors if this function fails, because it is unneccassary to try to handle the error later on
         self.try_move_sideways(i, density_based).unwrap_or(false)
     }
 
@@ -582,8 +615,15 @@ impl Space {
     /// # Structure:
     /// First checks ```self.try_move_vert()``` then ```self.try_move_diagonally()``` and then ```self.try_move_sideways()```
     pub fn move_gas(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
+
+        // tries to move vertically and if it fails it tries the next function
         if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
+
+        // tries to move diagonally and if it fails it tries the next function
         if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
+
+        // tries to move sideways and if it fails it will do nothing
+        // there will not be any errors if this function fails, because it is unneccassary to try to handle the error later on
         self.try_move_sideways(i, density_based).unwrap_or(false)
     }
 
@@ -592,7 +632,12 @@ impl Space {
     /// # Behaviour:
     /// It matches the cell type of index i to it's corresponding behavior
     pub fn update_cell_alchemy(&mut self) {
+
+        // iterate through all cells
         for i in 0..(self.lenght - 1) as usize {
+
+            // match the cell type
+            // TODO: make this more robust and more efficient (i.e. rework this function to match the cell type of index i and index j)  
             match self.cells[i].cell_type {
 
                 // change the rng range for different probabilities
@@ -611,6 +656,8 @@ impl Space {
 /// # Structure:
 /// compares the values individually and returns a boolean array based on the resulting values
 pub fn compare_arrays_4(a: [bool; 4], b: [bool; 4]) -> [bool; 4] {
+
+    // this is self explanatory
     [
         a[0] && b[0],
         a[1] && b[1],
