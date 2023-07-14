@@ -1,8 +1,5 @@
 mod cells_layer;
-mod player_layer;
-use crate::cells_layer::Space;
-
-use log::error;
+mod config;
 use pixels::{Error, Pixels, SurfaceTexture};
 
 use winit::dpi::LogicalSize;
@@ -10,20 +7,11 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
+
+use fps_counter;
 // debug
 // use std::env;
 // use backtrace::Backtrace;
-
-//const WIDTH: u32 = 2560;
-//const HEIGHT: u32 = 1440;
-
-// const WIDTH: i32 = 512;
-// const HEIGHT: i32 = 288;
-// const SCALE: f32 = 5.0;
-
-const WIDTH: i32 = 128;
-const HEIGHT: i32 = 128;
-const SCALE: f32 = 5.0;
 
 // here are the env variables that toggle dev tools
 const TOGGLE_DESCRIPTOR:bool = true;
@@ -36,11 +24,10 @@ fn main() -> Result<(), Error> {
     // let bt = Backtrace::new();
 
     // builds the Widow
-    env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
-        let size = LogicalSize::new(WIDTH as f32 * SCALE, HEIGHT as f32 * SCALE);
+        let size = LogicalSize::new(config::SCREEN_WIDTH as f32 * config::SCREEN_SCALE, config::SCREEN_HEIGHT as f32 * config::SCREEN_SCALE);
         WindowBuilder::new()
             .with_title("Re-Noita")
             .with_inner_size(size)
@@ -55,20 +42,21 @@ fn main() -> Result<(), Error> {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH as u32, HEIGHT as u32, surface_texture)?
+        Pixels::new(config::SCREEN_WIDTH as u32, config::SCREEN_HEIGHT as u32, surface_texture)?
     };
 
     // this is where the magic starts
-    let mut simulation_space = cells_layer::Space::new(WIDTH, HEIGHT);
-    let player = player_layer::PlayerState::new((0, 0),100);
+    let mut simulation_space = cells_layer::Space::new(config::SCREEN_WIDTH, config::SCREEN_HEIGHT);
+
+    let mut fps_tracker = fps_counter::FPSCounter::new();
     let mut counter:usize = 0;
     event_loop.run(move |event, _, control_flow| {
         
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
-            simulation_space.draw(pixels.get_frame_mut(), player);
+            simulation_space.draw(pixels.get_frame_mut());
             if let Err(err) = pixels.render() {
-                error!("pixels.render() failed: {err}");
+                println!("{:?}", err);
                 *control_flow = ControlFlow::Exit;
                 return;
             }
@@ -85,7 +73,7 @@ fn main() -> Result<(), Error> {
             // Resize the window
             if let Some(size) = input.window_resized() {
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
-                    error!("pixels.resize_surface() failed: {err}");
+                    println!("pixels.resize_surface() failed: {err}");
                     *control_flow = ControlFlow::Exit;
                     return;
                 }
@@ -94,7 +82,7 @@ fn main() -> Result<(), Error> {
 
             {
                 let mouse_pos = match input.mouse() {
-                    Some(mouse_position_raw) => ((mouse_position_raw.0 / SCALE).trunc() as i32, (mouse_position_raw.1 / SCALE).trunc() as i32) ,
+                    Some(mouse_position_raw) => ((mouse_position_raw.0 / config::SCREEN_SCALE).trunc() as i32, (mouse_position_raw.1 / config::SCREEN_SCALE).trunc() as i32) ,
                     None => (0, 0),
                 };
 
@@ -125,10 +113,9 @@ fn main() -> Result<(), Error> {
                             
                             let b = cells_layer::CellTypeProperties::get_cell_properties_by_number(&counter);
 
-
-                            if input.mouse_held(0) { simulation_space.set_cell_checked(i, &cells_layer::Cell::build_cell(b.cell_type)).ok(); }
+                            if input.mouse_held(0) { simulation_space.paint_bush(mouse_pos, 5, b.cell_type, cells_layer::BrushType::Circle);}
                             
-                            print!("The selected Material is {} | You are looking at {}                                          \r",b.name, a);
+                            //print!("The selected Material is {} | You are looking at {}                                          \r",b.name, a);
                         }
                         
                     },
@@ -145,7 +132,10 @@ fn main() -> Result<(), Error> {
                 simulation_space.update_cell_alchemy();
             }
             window.request_redraw();
-
+            println!("{}", fps_tracker.tick());
+            //player.get_sim_dimensions();
+            // let a = Chunk::new_with_fill(cells_layer::CellType::Sand, (0,0));
+            // println!("{:#?}", Chunk::save_to_file_bin(&a));
             //println!("{:?}", bt);
         }
     });
@@ -153,13 +143,10 @@ fn main() -> Result<(), Error> {
 }
 
 impl Space {
-    fn draw(&self, frame: &mut [u8], player: player_layer::PlayerState) {
+    fn draw(&self, frame: &mut [u8]) {
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
 
             let mut rgba = self.cells[i].color;
-            if self.get_coordinates(i as isize) == player.positon {
-                rgba = [0xFF, 0x0, 0x0, 0xFF];
-            }
 
 
             pixel.copy_from_slice(&rgba);

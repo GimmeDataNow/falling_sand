@@ -1,7 +1,9 @@
-use std::{usize, isize};
+// imports
+use crate::config::CHUNK_SIZE;
 
-// imports:
 use rand::Rng;
+
+use fnv::FnvHashMap;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -14,7 +16,7 @@ pub enum CustomErrors {
 
 /// The ```CellType``` is the material of a cell
 /// # Options:
-/// The materials are: ```Air```, ```Rock```, ```Wood```, ```Sand```, ```Gunpowder```, ```Water```, ```Oil```, ```Fire```, ```Lava```, ```Acid```
+/// The materials are: ```Air```, ```Rock```, ```Wood```, ```Sand```, ```Gunpowder```, ```Water```, ```Oil```, ```Fire```, ```Lava```, ```Acid``` ....
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum CellType {
     Air,
@@ -28,6 +30,12 @@ pub enum CellType {
     Oil,
     Lava,
     Acid,
+    AntiVoid
+}
+impl Default for CellType {
+    fn default() -> Self {
+        CellType::AntiVoid
+    }
 }
 
 /// # Functionality:
@@ -83,7 +91,7 @@ pub struct CellTypeProperties {
 /// This is the look-up-array for other functions to rely on
 /// # Structure:
 /// It's an static array of ```CellTypeProperties``` with fixed lenght
-static CELL_PROPERTIES: [CellTypeProperties; 11] = [    
+static CELL_PROPERTIES: [CellTypeProperties; 12] = [    
     CellTypeProperties { name: "Air",       cell_type: CellType::Air,       state: StateOfAggregation::Replaceable,     density: 0.0,   temp_coefficient: 1.0,      flammable: false, base_temp: 298,   base_color: [0,   0,    0, 0] },
     CellTypeProperties { name: "Rock",      cell_type: CellType::Rock,      state: StateOfAggregation::ImmovableSolid,  density: 9.0,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [119, 136,  153, 255] },
     CellTypeProperties { name: "Water",     cell_type: CellType::Water,     state: StateOfAggregation::Liquid,          density: 1.0,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0, 0,  255, 255] },
@@ -91,11 +99,13 @@ static CELL_PROPERTIES: [CellTypeProperties; 11] = [
     CellTypeProperties { name: "Gravel",    cell_type: CellType::Gravel,    state: StateOfAggregation::Granular,        density: 3.1,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [112, 128,  144, 255] },
     CellTypeProperties { name: "Wood",      cell_type: CellType::Wood,      state: StateOfAggregation::ImmovableSolid,  density: 1.2,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [139, 69,   19, 255] },
     CellTypeProperties { name: "Steam",     cell_type: CellType::Steam,     state: StateOfAggregation::Gas,             density: 0.1,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [206, 206,  209, 255] },
-    CellTypeProperties { name: "Gunpowder", cell_type: CellType::Gunpowder, state: StateOfAggregation::Granular,        density: 1.7,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [70, 70,    80, 255] },
-    CellTypeProperties { name: "Oil",       cell_type: CellType::Oil,       state: StateOfAggregation::Liquid,          density: 0.9,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [55, 58,    54, 255] },
-    CellTypeProperties { name: "Lava",      cell_type: CellType::Lava,      state: StateOfAggregation::Liquid,          density: 3.1,   temp_coefficient: 100.0,    flammable: false, base_temp: 298,   base_color: [255, 0,    0, 255] },
-    CellTypeProperties { name: "Acid",      cell_type: CellType::Acid,      state: StateOfAggregation::Liquid,          density: 1.4,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0,   255,  0, 255] },
+    CellTypeProperties { name: "Gunpowder", cell_type: CellType::Gunpowder, state: StateOfAggregation::Granular,        density: 1.7,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [70,  70,   80,  255] },
+    CellTypeProperties { name: "Oil",       cell_type: CellType::Oil,       state: StateOfAggregation::Liquid,          density: 0.9,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [55,  58,   54,  255] },
+    CellTypeProperties { name: "Lava",      cell_type: CellType::Lava,      state: StateOfAggregation::Liquid,          density: 3.1,   temp_coefficient: 100.0,    flammable: false, base_temp: 298,   base_color: [255, 0,    0,   255] },
+    CellTypeProperties { name: "Acid",      cell_type: CellType::Acid,      state: StateOfAggregation::Liquid,          density: 1.4,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0,   255,  0,   255] },
+    CellTypeProperties { name: "Anti-Void", cell_type: CellType::AntiVoid,  state: StateOfAggregation::ImmovableSolid,  density: 9.9,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [255, 255,  255, 255] }
 ];
+
 
 impl CellTypeProperties {
 
@@ -139,6 +149,12 @@ pub struct Cell {
     pub generation: u32,
     pub temp: u16,
 }
+impl Default for Cell {
+    fn default() -> Self {
+        let c = CellTypeProperties::get_cell_properties(CellType::default());
+        Cell { cell_type: c.cell_type, color: c.base_color, generation: 0, temp: 295 }
+    }
+}
 
 impl Cell {
 
@@ -157,7 +173,7 @@ impl Cell {
         Cell { 
             cell_type: ref_cell_properties.cell_type,
             generation: 0, 
-            color: ref_cell_properties.base_color, 
+            color: if ref_cell_properties.state != StateOfAggregation::Liquid && ref_cell_properties.state != StateOfAggregation::Gas { randomise_color(ref_cell_properties.base_color, 0.1)} else { ref_cell_properties.base_color }, 
             temp: ref_cell_properties.base_temp,  
         }
     }
@@ -167,501 +183,206 @@ impl Cell {
     pub fn set_air() -> Cell { Self::build_cell(CellType::Air) }
 }
 
-/// # Functionality:
-/// This is the general World space in which the simulation occurs
-/// # Structure:
-/// ```
-/// pub struct Space {
-///     pub width: u32,
-///     pub height: u32,
-///     pub lenght: i32,
-///     pub generation: u32,
-///     pub cells: Vec<Cell>,
-/// }
-/// ```
-pub struct Space {
-    pub width: i32,
-    pub height: i32,
-    pub lenght: i32,
-    pub generation: u32,
-    pub cells: Vec<Cell>,
+pub fn randomise_color(color: [u8; 4], range: f32) -> [u8; 4] {
+    if range < 0.0 || range > 1.0 { return color; }
+    let brightness_adjust: f32 = rand::thread_rng().gen_range(0.0..range);
+    [
+        (color[0] as f32 * (1.0 - brightness_adjust)).trunc() as u8,
+        (color[1] as f32 * (1.0 - brightness_adjust)).trunc() as u8,
+        (color[2] as f32 * (1.0 - brightness_adjust)).trunc() as u8,
+        (color[3] as f32 * (1.0 - brightness_adjust)).trunc() as u8
+    ]
 }
 
-impl Space {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Chunk {
+    pub chunk_coordinates: (i32, i32),
+    pub cells: [[Cell; CHUNK_SIZE]; CHUNK_SIZE],
+}
+
+impl Default for Chunk {
+    fn default() -> Self {
+        Chunk { cells: [[Cell::default(); CHUNK_SIZE]; CHUNK_SIZE], chunk_coordinates: (0,0) }
+    }
+}
+
+impl From<std::io::Error> for CustomErrors {
+    fn from(_: std::io::Error) -> Self {
+        CustomErrors::CouldNotComplete
+    }
+}
+
+impl Chunk {
+
     /// # Functionality:
-    /// Creates a new simulation space with dimentions ```width * height``` and thus an ```index i``` of ```width * height = lenght```
-    /// # Panic behaviour:
-    /// panics if ```width < 0``` or ```height < 0```
-    pub fn new(width: i32, height: i32) -> Self {
-
-        // creates the cell 'list'
-        let length = width * height;
-        let mut cells = Vec::with_capacity(length as usize);
-
-        // fills the list with empty cells / air
-        for _ in 0..length {
-            cells.push(Cell::set_air());
-        }
-        Space { width, height, lenght: width * height, generation: 0, cells }
+    /// returns a filled ```Chunk``` with the given ```CellType``` and ```(x,y)``` chunk-coordinates.
+    pub fn new_with_fill(cell_type: CellType, chunk_coords: (i32, i32)) -> Chunk {
+        let cell = Cell::build_cell(cell_type);
+        Chunk { cells: [[cell; CHUNK_SIZE]; CHUNK_SIZE], chunk_coordinates: chunk_coords}
     }
 
     /// # Functionality:
-    /// Increments the simulation space's generation by one
-    /// # Panic behaviour:
-    /// This function will sometimes error due to ```arithmetic_overflow```, this is dependant on the maximum size of ```self.generation```.
-    /// 
-    /// If ```Space``` has a genation counter with the size of u8, then the application will error very quickly.
-    #[allow(arithmetic_overflow)]
-    pub fn increment_generation(&mut self) { self.generation += 1 }
-
-    /// # Functionality:
-    /// Sets the cell's generation to the of ```Space```
-    /// # Panic behaviour:
-    /// This function will sometimes error if ```i > self.lenght```
-    pub fn update_cell_generation(&mut self, i: usize) { self.cells[i].generation = self.generation }
-
-    /// # Functionality:
-    /// Checks if the cell's generation is equal to the current generation of ```Space```.
-    /// # Panic behaviour:
-    /// This function will sometimes error if ```i > self.lenght```
-    pub fn cell_needs_updating(&self, i: usize) -> bool { self.generation != self.cells[i].generation }
-
-    /// # Functionality:
-    /// Calculates the coordinates based on the index
-    /// # Formula:
-    /// ```
-    /// let x = i as i32 % self.width;
-    /// let y = (i as i32 - x) / self.width;
-    /// (x, y)
-    /// ```
-    /// # Undefined behaviour:
-    /// If ```i < 0 || i > self.lenght``` then it might cause unwanted behavior. Not really 'undefined', but usually unwanted
-    pub fn get_coordinates(&self, i:isize) -> (i32, i32) {
-        let x = i as i32 % self.width;
-        let y = (i as i32 - x) / self.width;
-        (x, y)
+    /// gets the save/load file path for the given `(x,y)` chunk-coordinates.
+    fn get_chunk_path(coords: (i32, i32)) -> String {
+        todo!()
     }
 
     /// # Functionality:
-    /// Returns the index based on the x and y coordinates as well as self.width
-    /// # Formula:
-    /// ```
-    /// (x + (y * self.width));
-    /// ```
-    /// # Undefined behaviour:
-    /// if ```i < 0 || i > self.lenght``` then it might cause unwanted behavior. Not really 'undefined', but usually unwanted
-    pub fn get_index(&self, x: i32, y: i32) -> isize { (x + (y * self.width)) as isize }
+    /// returns the chunk with the given `(x,y)` chunk-coordinates or returns an Error.
+    fn load_chunk_from_file(coords: (i32, i32)) -> Result<Chunk, CustomErrors> {
+        let path = Chunk::get_chunk_path(coords);
+        todo!()
+    }
 
     /// # Functionality:
-    /// Returns the ```Option<isize>``` where ```Some()``` is the checked index ```i```
-    pub fn get_index_checked(&self, x: i32, y: i32) -> Result<isize, CustomErrors> {
-        if x > self.width || y > self.height || x < 0 || y < 0 {
-            Err(CustomErrors::OutOfBounds)
-        } else {
-            Ok(self.get_index(x, y))
+    /// returns the chunk with the given `(x,y)` chunk-coordinates or returns a default Chunk.
+    /// This is simply a wrapper around `load_chunk_from_file()`.
+    fn get_chunk_from_file(coords: (i32, i32)) -> Chunk {
+        match Chunk::load_chunk_from_file(coords) {
+            Ok(c) => c,
+            Err(_) => Chunk::new_with_fill(CellType::default(), (0,0))
         }
     }
 
     /// # Functionality:
-    /// Checks if the index is within bounds. returns ```false``` if the index is not inbounds
-    /// # Formula:
-    /// ```
-    /// i > 0 && i < self.lenght as isize - 1
-    /// return true;
-    /// ```
-    pub fn index_inbounds(&self, i: isize) -> bool {
-        i > 0 && i < self.lenght as isize
+    /// `TODO`
+    fn save_chunk_to_file(&self) -> Result<(), CustomErrors> {
+        todo!()
     }
 
     /// # Functionality:
-    /// Returns the ```CellTypeProperties``` after validating if the index is inbounds
-    /// # Panic behaviour:
-    /// Return ```CustomErrors::OutOfBounds``` if the function fails
-    pub fn get_properties_checked(&self, i: isize) -> Result<&CellTypeProperties, CustomErrors> {
-        if !self.index_inbounds(i) { return Err(CustomErrors::OutOfBounds) }
-        Ok(&self.cells[i as usize].get_cell_properties())
+    /// `TODO`
+    fn unload_chunk(&mut self) -> Result<(), CustomErrors> {
+        todo!()
     }
 
-    /// # Functionality:
-    /// Checks if the density of i is greater than j
-    /// # Panic behaviour:
-    /// Return ```CustomErrors::OutOfBounds``` if the function fails
-    pub fn compare_density(&self, i:isize , j: isize) -> Result<bool, CustomErrors> {
-        Ok(self.get_properties_checked(i)?.density > self.get_properties_checked(j)?.density)
+    // should implement some error handling but this works for now
+    fn get_cell_local_coords(&self, coords: (i32, i32)) -> Cell {
+
+        // to usize coordinates
+        let pos = (coords.0 as usize, coords.1 as usize);
+
+        // retun the cell
+        self.cells[pos.1][pos.0]
     }
+
+    fn set_cell_local_coords(&self, coords: (i32, i32), cell: Cell) -> Option<()> {
+
+        // assumes that the index is within the bounds of the chunk
+        let pos = (coords.0 as usize, coords.1 as usize);
+
+        // changes the cell
+        self.cells[pos.1][pos.0] = cell;
+
+        // a return value i guess?
+        Some(())
+    }
+
     
-    /// # Functionality:
-    /// Checks if i is ```not``` ```StateOfAggregation::ImmovableSolid``` and ```StateOfAggregation::Granular```
-    /// # Panic behaviour:
-    /// Return ```CustomErrors::OutOfBounds``` if the function fails
-    pub fn is_solid(&self, i: isize) -> Result<bool, CustomErrors> {
-        Ok(self.get_properties_checked(i)?.state == StateOfAggregation::Granular || self.get_properties_checked(i)?.state == StateOfAggregation::ImmovableSolid)
-    }
+}
 
-    /// # Functionality:
-    /// Swaps two cells with the index i and j
-    /// # Panic behaviour:
-    /// Panics if ```self.index_inbounds(i) == false``` or ```self.index_inbounds(j) == false```
-    pub fn swap_cells(&mut self, i: isize, j: isize) {
+// should prob only have one of these active at any given time, but I don't quite understand Singletons yet
+pub struct ChunkManager {
+    pub is_empty: bool,
+    pub map: fnv::FnvHashMap<(i32, i32), Chunk>
+}
 
-        // convert from isize to usize
-        let ii = i as usize;
-        let jj = j as usize;
+impl ChunkManager {
+    fn new() -> Self {
 
-        //simplified the swap using std::mem::swap / Vec::swap
-        self.cells.swap(ii, jj);
+        // probably a better way to do this but I don't know how
+        // I really dislike the implicit type declaration that is made by default_coords and val
+        let mut map = fnv::FnvHashMap::default();
 
-        //mark all cells as updated
-        self.cells[jj].generation = self.generation;
-        self.cells[ii].generation = self.generation;
-    }
+        // player spawns here
+        let default_coords = (0, 0);
 
-    /// # Functionality:
-    /// Sets a cell to a specific type. Does not handle errors.
-    /// # Behaviour:
-    /// May cause a cell to wait too long to update, due to ```self.cells[i].generation = self.generation```
-    /// # Panic behaviour:
-    /// Panics if ```self.index_inbounds(i) == false```
-    #[allow(dead_code)]
-    pub fn set_cell(&mut self, i: usize, cell: &Cell) {
-        
-        // replace the cell
-        self.cells[i] = *cell;
+        // here the loading of the default chunk is done
+        let val = Chunk::get_chunk_from_file(default_coords);
 
-        //mark it as updated
-        self.cells[i].generation = self.generation;
-    }
-    
-    /// # Functionality:
-    /// Sets a cell to a specific type, checks for ```self.index_inbounds()```
-    /// # Behaviour:
-    /// May cause a cell to wait too long to update, due to ```self.cells[i].generation = self.generation```
-    /// # Panic behaviour:
-    /// Should the index i somehow reach the latter of the function skipping the error prevention, then this function will panic irrecoverably
-    pub fn set_cell_checked(&mut self, i: isize, cell: &Cell) -> Result<bool, CustomErrors> {
-
-        // check the index
-        if !self.index_inbounds(i) { return Err(CustomErrors::OutOfBounds) }
-
-        // replace the cell
-        self.cells[i as usize] = *cell;
-
-        //mark it as updated
-        self.cells[i as usize].generation = self.generation;
-
-        // mark it as done
-        Ok(true)
-    }
-
-    /// # Functionality:
-    /// This function was made to enable a paint brush tool to draw on the screen.
-    /// # Behaviour:
-    /// Reitreives the mouse position and then iterates through a square with side length of brush_size. Dependant on the brush_type this square will filled with different patterns.
-    /// # Panic behaviour:
-    /// This function cannot error as it simply ignores all errors resulting from lower function calls.
-    pub fn paint_bush(&mut self, mouse_pos: (i32, i32), brush_radius: i32, brush_material: CellType, brush_type: BrushType) {
-        // convert mouse position tuple into two strandalone numbers
-        let (x, y) = mouse_pos;
-
-        // iterate through the x coordinates
-        for dx in -brush_radius..=brush_radius {
-
-            // iterate through the y coordinates
-            for dy in -brush_radius..=brush_radius {
-
-                // get the index of the mouse position
-                let i = self.get_index(x + dx, y + dy);
-
-                // this handles the cell material
-                let cell = &Cell::build_cell(brush_material);
-
-                // match the brush type and the return value of the function self.index_inbounds(i)
-                match (self.index_inbounds(i), &brush_type) {
-
-                    // ignore all cases where the index is out of bounds
-                    (false, _) => false,
-
-                    //standard square brush
-                    (true, BrushType::Square) => self.set_cell_checked(i,cell).unwrap_or(false),
-
-                    // i don't know why but this is the best way to do it, because for some reason the compiler doesn't allow for it to be written as dx^2 or dx.abs()^2
-                    (true, BrushType::Circle) => { if dx*dx + dy*dy <= brush_radius*brush_radius { self.set_cell_checked(i,cell).unwrap_or(false) } else { false } },
-                };
-            }
-        }
-    }
-
-    /// # Functionality:
-    /// Simulates the movement of all cells in ```Space```
-    /// # Behaviour:
-    /// Matches behavior to ```CellType``` and executes matching functions. If the cell is of the ```StateOfAggregation::ImmovableSolid``` or ```StateOfAggregation::Replaceable``` type, then it will be skipped
-    /// # Panic behaviour:
-    /// Inherits the panic behavior of all used functions and thus can make it hard to track down errors
-    pub fn update_cell_behaviour(&mut self) {
-
-        // iterate trough all elements of the Vec
-        for i in 0..(self.lenght as usize) {
-
-            // needs to check if the cell needs updating
-            if self.cell_needs_updating(i) {
-                
-                // match the cell type of index i to it's behavior
-                match self.cells[i].get_cell_properties().state {
-
-                    // uses move_granular() to simulate sand/gravel like materials
-                    StateOfAggregation::Granular => self.move_granular(i as isize, true, false),
-
-                    // move_granular() exept it can move left and right
-                    StateOfAggregation::Liquid => self.move_liquid(i as isize, true, true),
-
-                    // baisically just reverse liquid
-                    StateOfAggregation::Gas => self.move_gas(i as isize, false, true),
-
-                    // discard all else
-                    _ => false,
-                };
-
-                // mark the cell as updated
-                self.update_cell_generation(i);   
-            }
-        }
-        
-        // mark the space as updated and allow it to be updated again in the next iteration
-        self.increment_generation()
-    }
-
-    /// # Functionality:
-    /// Tries to move a cell vertically. Returns a sucess bool
-    /// # Behaviour:
-    /// Depending on the ```gravity_normal``` bool it moves it up or down. If ```gravity_normal``` is set to true gravity is normal
-    /// # Undefined behaviour:
-    /// If ```i < 0 || i > self.lenght``` then it might cause unwanted behavior. Not really 'undefined', but usually unwanted
-    pub fn try_move_vert(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> Result<bool, CustomErrors> {
-
-        // turns the gravity_normal bool into something more usable
-        let j = if gravity_normal { i + self.width as isize } else { i - self.width as isize };
-
-        // check if the index is inbounds
-        if !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
-        
-        // checks if the cell is not solid
-        if !self.is_solid(j)? {
-
-            // checks if the swap is density based and checks if the index i has a higher density than the index j
-            if density_based && self.compare_density(i, j)? {
-                self.swap_cells(i, j);
-                return Ok(true);
-            }
-
-            // another boolean check to ensure that the code is only executed if the cell is not density based 
-            if !density_based {
-                self.swap_cells(i, j);
-                return Ok(true);
-            }
-        }
-
-        // if the code gets here, then this is undefined behavior
-        Err(CustomErrors::UndefinedBehavior)
-    }
-    
-    /// # Functionality:
-    /// Checks if a cell is air or if the cell is not an ```ImmovableSolid```, and then it compares ```densities```
-    /// # Structure:
-    /// test for ```index_inbounds()``` && ```boundary detetection``` && ```non-ImmovableSolid```. 
-    /// Then test for ```index_inbounds``` && ```density difference```
-    pub fn compare_sides(&mut self, ref_cell: isize, i: isize) -> [bool; 4] {
-
-        // these are the indices of the cells that will be checked
-        let left_pos = i - 1;
-        let right_pos = i + 1;
-
-        // check if the cell is not solid
-        let left = !self.is_solid(left_pos).unwrap_or(true);
-        let right = !self.is_solid(right_pos).unwrap_or(true);
-
-        // compare the density of the cells ref_cell and right_pos/left_pos
-        let left_less_dense = self.compare_density(ref_cell, left_pos).unwrap_or(false);
-        let right_less_dense = self.compare_density(ref_cell, right_pos).unwrap_or(false);
+        // dump the loaded chunk into the map as a default
+        map.insert(default_coords, val);
 
         // return
-        [left, left_less_dense, right, right_less_dense]
+        ChunkManager { is_empty: false, map: map }
     }
-    
-    /// # Functionality:
-    /// This function is made to reduce the complexity of other functions. The function takes in an array of two bools, and swaps the corresponding cells.
-    /// # Structure:
-    /// It uses a random bool generator to dictate which cell to swap first. This ensures that the swaps are evenly distributed.
-    /// 
-    /// The cell i is swapped with the cell j. It assumes the ```can_move``` is based on the perspective of the cell i.
-    pub fn random_move_side(&mut self, can_move: [bool; 2], i: isize, j: isize) -> Result<bool, CustomErrors> {
-        // random bool to decide the direction of movement
-        let rand_bool = rand::random::<bool>();
 
-        // series of checks to move the cell
-        // TODO: make this more robust and more efficient (i.e. reduce complexity)
-        if rand_bool {
-            if can_move[0] {
-                self.swap_cells(i, j - 1);
-                return Ok(true);
-            }
-            else if can_move[1] {
-                self.swap_cells(i, j + 1);
-                return Ok(true);
-            }
+    fn global_pos_to_chunk_pos(&self, coords: (i32, i32)) -> (i32, i32) {
+
+        // this should return the position as (i32, i32), but no guarantee with this
+        (coords.0 / CHUNK_SIZE as i32 , coords.1 / CHUNK_SIZE as i32)
+    }
+
+    fn global_pos_decompose(&self, coords: (i32, i32)) -> ((i32, i32), (i32, i32)) {
+
+        // this should return the position as (i32, i32), but no guarantee with this
+        // this should also return the remainder as (i32, i32), but no guarantee with this
+        ( (coords.0 / CHUNK_SIZE as i32 , coords.1 / CHUNK_SIZE as i32), (coords.0 % CHUNK_SIZE as i32 , coords.1 % CHUNK_SIZE as i32) )
+    }
+
+    fn get_cell(&self, coords: (i32, i32)) -> Option<Cell> {
+
+        // split the coordinates into chunk and local coordinates
+        let k = self.global_pos_decompose(coords);
+
+        // use the chunk coordinates to get the chunk
+        let chunk = self.map.get(&k.0)?;
+
+        // index into the chunk and retrieve the cell
+        Some(chunk.get_cell_local_coords(k.1))
+    }
+
+    fn set_cell(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
+
+        // decompose the coordinates
+        let k = self.global_pos_decompose(coords);
+
+        // pray this is actually a mutable reference
+        let chunk = self.map.get_mut(&k.0)?;
+
+        // replace the cell at the given coordinates with the given cell    
+        // assumes chunk is acutally mutable (not sure if this is the case though)
+        chunk.set_cell_local_coords(coords, cell);
+
+        // a return value i guess?
+        Some(())
+    }
+
+    // maybe invert the return value? this would be nice cause i can just use the ? operator to exit the other functions if necessary
+    fn simulate_vertical(&mut self, coords: (i32, i32)) -> Option<()> {
+        None
+    }
+
+    //
+    fn simulate_granular(&mut self) -> Option<()> {
+        Some(())
+    }
+
+    fn match_behaviour(&mut self, cell: Cell, coords: (i32, i32)) {
+        match cell.get_cell_properties().state {
+            StateOfAggregation::Granular => (),
+            _ => (),
         }
-        else if can_move[1] {
-            self.swap_cells(i, j + 1);
-            return Ok(true);
-        }
-        else if can_move[0] {
-            self.swap_cells(i, j - 1);
-            return Ok(true);
-        }
-
-        // throw an error if this code is reached as this is undefined behavior
-        Err(CustomErrors::UndefinedBehavior)
     }
 
-    /// # Functionality:
-    /// Checks if a cell is air or if the cell is not an ```ImmovableSolid```, and then it compares densities
-    /// # Structure:
-    /// first checks if cells to the left and right and the ones below and afterwards checks for density if ```density_based == true```
-    pub fn try_move_diagonally(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> Result<bool, CustomErrors> {
+    pub fn simulate_area(&mut self, p1: (i32, i32), p2: (i32, i32)) -> Result<(), CustomErrors> {
 
-        // turns the gravity_normal bool into something more usable
-        let j = if gravity_normal { i + self.width as isize } else { i - self.width as isize };
+        // get the lower left and upper right coordinates
+        let upperleft = (p1.0.min(p2.0), p1.1.min(p2.1));
+        let lowerright = (p1.0.max(p2.0), p1.1.max(p2.1));
 
-        // handle index i and j. Check self.index_inbounds(i) and self.index_inbounds(j)
-        if !self.index_inbounds(i) || !self.index_inbounds(j) { return Err(CustomErrors::OutOfBounds) }
+        // iterate over the coordinates
+        for x in upperleft.0..lowerright.0 {
+            for y in upperleft.1..lowerright.1 {
 
-        // some logic processing
-        let same_level_array = self.compare_sides(i, i);
-        let offset_level_array = self.compare_sides(i, j);
-        let a = compare_arrays_4(same_level_array, offset_level_array);
-        
-        // merges the boolean arrays based on the density_based bool
-        let can_move = if density_based { [a[0] && a[1], a[2] && a[3]]} else {[a[0], a[2]]};
-
-        // swap based on rand_bool to randomise the resulting swap
-        self.random_move_side(can_move, i, j)?;
-        
-        //if anyting errors then this is undefined behavior
-        Err(CustomErrors::UndefinedBehavior)
-    }
-
-    /// # Functionality:
-    /// Checks if a cell is air or if the cell is not an ```ImmovableSolid```, and then it compares densities
-    /// # Structure:
-    /// checks if cells to the left and right and randomly selects a order of execution
-    pub fn try_move_sideways(&mut self, i: isize, density_based: bool) -> Result<bool, CustomErrors> {
-
-        // create variables for further processing
-        let same_level = self.compare_sides(i, i);
-
-        // accounts for the density_based bool
-        let can_move = if density_based {
-            [same_level[0] && same_level[1], same_level[2] && same_level[3]]
-        }
-        else { 
-            [same_level[0], same_level[2]]
-        };
-
-        // swap based on rand_bool to randomise the resulting swap
-        self.random_move_side(can_move, i, i)?;
-
-        //if anyting errors then this is undefined behavior
-        Err(CustomErrors::UndefinedBehavior)
-    }
-
-    /// # Functionality:
-    /// Simulates the movement of a cell assuming a state of aggregation of ```StateOfAggregation::Granular```
-    /// # Behaviour:
-    /// Tries to mimic movement of granular materials by first checking below itself. And only if it can't move down it will try to move diagonally
-    /// # Structure:
-    /// First checks ```self.try_move_vert()``` and then ```self.try_move_diagonally()```
-    pub fn move_granular(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
-
-        // tries to move vertically and if it fails it tries the next function
-        if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
-
-        // tries to move diagonally and if it fails it will do nothing
-        // there will not be any errors if this function fails, because it is unneccassary to try to handle the error later on
-        self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false)
-    }
-
-    /// # Functionality:
-    /// Simulates the movement of a cell assuming a state of aggregation of ```StateOfAggregation::Liquid```
-    /// # Behaviour:
-    /// Tries to mimic movement of liquid materials by first checking below itself. And only if it can't move down it will try to move diagonally. Should that too fail will it try to move sideways
-    /// # Structure:
-    /// First checks ```self.try_move_vert()``` then ```self.try_move_diagonally()``` and then ```self.try_move_sideways()```
-    pub fn move_liquid(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
-
-        // tries to move vertically and if it fails it tries the next function
-        if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
-
-        // tries to move diagonally and if it fails it tries the next function
-        if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
-
-        // tries to move sideways and if it fails it will do nothing
-        // there will not be any errors if this function fails, because it is unneccassary to try to handle the error later on
-        self.try_move_sideways(i, density_based).unwrap_or(false)
-    }
-
-    /// # Functionality:
-    /// Simulates the movement of a cell assuming a state of aggregation of ```StateOfAggregation::Gas```
-    /// # Behaviour:
-    /// Tries to mimic movement of liquid materials by first checking below itself. And only if it can't move up it will try to move diagonally. Should that too fail will it try to move sideways
-    /// # Structure:
-    /// First checks ```self.try_move_vert()``` then ```self.try_move_diagonally()``` and then ```self.try_move_sideways()```
-    pub fn move_gas(&mut self, i: isize, gravity_normal: bool, density_based: bool) -> bool {
-
-        // tries to move vertically and if it fails it tries the next function
-        if self.try_move_vert(i, gravity_normal, density_based).unwrap_or(false) { return true }
-
-        // tries to move diagonally and if it fails it tries the next function
-        if self.try_move_diagonally(i, gravity_normal, density_based).unwrap_or(false) { return true }
-
-        // tries to move sideways and if it fails it will do nothing
-        // there will not be any errors if this function fails, because it is unneccassary to try to handle the error later on
-        self.try_move_sideways(i, density_based).unwrap_or(false)
-    }
-
-    /// # Functionality:
-    /// This function is the backbone for all alchemical reactions
-    /// # Behaviour:
-    /// It matches the cell type of index i to it's corresponding behavior
-    pub fn update_cell_alchemy(&mut self) {
-
-        // iterate through all cells
-        for i in 0..(self.lenght - 1) as usize {
-
-            // match the cell type
-            // TODO: make this more robust and more efficient (i.e. rework this function to match the cell type of index i and index j)  
-            match self.cells[i].cell_type {
-
-                // change the rng range for different probabilities
-                // ignore the safety checks since i is already in range
-                CellType::Steam => if rand::thread_rng().gen_range(1..=1250) < 2 { self.set_cell(i, &Cell { cell_type: CellType::Water, color: CellTypeProperties::get_cell_properties(CellType::Water).base_color, generation: 0, temp: 298 });},
-
-                // discard all else
-                _ => (),
+                match self.get_cell((x,y)) {
+                    // add the sim cell funtion here
+                    Some(cell) => (),
+                    None => (),
+                }
             }
         }
+        todo!()
     }
-}
 
-/// # Functionality:
-/// made to reduce code duplication
-/// # Structure:
-/// compares the values individually and returns a boolean array based on the resulting values
-pub fn compare_arrays_4(a: [bool; 4], b: [bool; 4]) -> [bool; 4] {
-
-    // this is self explanatory
-    [
-        a[0] && b[0],
-        a[1] && b[1],
-        a[2] && b[2],
-        a[3] && b[3]
-    ]
 }

@@ -6,16 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-backtrace = "0.3"
-
 rand = "0.8.5"
 
-env_logger = "0.10"
-log = "0.4"
 pixels = "0.11.0"
 winit = "0.27.0"
 winit_input_helper = "0.13"
-debug_print = "1.0.0"
+
+fnv = "1.0.7"
+
+fps_counter = "2.0.0"
 
 [features]
 # optimize = ["log/release_max_level_warn"]
@@ -23,7 +22,7 @@ debug_print = "1.0.0"
 
 # For optimization (at the cost of build time)
 [profile.dev]
-opt-level = 3
+opt-level = 0
 
 [profile.dev.package."*"]
 opt-level = 3
