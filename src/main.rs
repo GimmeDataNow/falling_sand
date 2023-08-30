@@ -191,14 +191,15 @@ impl chunk_manager::ChunkManager {
 
         // Calculate the half width and half height of the area
         let half_width = config::SCREEN_WIDTH / 2;
-        let half_height = config::SCREEN_HEIGHT / 2;
+        let half_height = config::SCREEN_WIDTH / 2;
 
         // this holds all of the color data
-        let mut color_map: Vec<[u8;4]> = Vec::with_capacity(SCREEN_WIDTH_USIZE*SCREEN_HEIGHT_USIZE);
+        let mut color_map: Vec<[u8;4]> = Vec::new();
+        println!("{}", color_map.len());
 
         // Loop through the cells within the area
-        for dy in -half_width..=half_width {
-            for dx in -half_height..=half_height {
+        for dx in -half_width..=half_width {
+            for dy in -half_height..=half_height {
                 let cell_x = cam_pos.0 + dx;
                 let cell_y = cam_pos.1 + dy;
 
@@ -209,7 +210,6 @@ impl chunk_manager::ChunkManager {
                 color_map.push(self.get_cell_at_global_coords(coords).unwrap_or(Cell::default()).color)
             }
         }
-
         // copy the color map to a frame buffer
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
             pixel.copy_from_slice(&color_map[i])
