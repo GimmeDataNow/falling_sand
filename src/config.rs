@@ -2,7 +2,14 @@ pub const SCREEN_WIDTH: i32 = 50;
 pub const SCREEN_HEIGHT: i32 = 50;
 pub const SCREEN_SCALE: f32 = 4.0;
 
-pub const CHUNK_SIZE: usize = 64;
+pub const CHUNK_SIZE_USIZE: usize = 64;
+pub const CHUNK_LENGTH_USIZE: usize = CHUNK_SIZE_USIZE * CHUNK_SIZE_USIZE;
+pub const CHUNK_SIZE_I32: i32 = CHUNK_SIZE_USIZE as i32;
+
+pub const SIMULATION_WIDTH_USIZE: usize = 512;
+pub const SIMULATION_WIDTH_I32: i32 = SIMULATION_HEIGHT_USIZE as i32;
+pub const SIMULATION_HEIGHT_USIZE: usize = 512;
+pub const SIMULATION_HEIGHT_I32: i32 = SIMULATION_HEIGHT_USIZE as i32;
 
 pub const MAX_VETICAL: usize = 5;
 pub const MAX_HORIZONTAL: usize = 5;

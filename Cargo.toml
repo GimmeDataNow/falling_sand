@@ -14,6 +14,11 @@ winit_input_helper = "0.13"
 
 fnv = "1.0.7"
 
+serde = { version = "1.0", features = ["derive"] }
+serde_derive = "1.0.180"
+ron = "0.8"
+serde-big-array = "0.5.1"
+
 fps_counter = "2.0.0"
 
 [features]
@@ -22,7 +27,7 @@ fps_counter = "2.0.0"
 
 # For optimization (at the cost of build time)
 [profile.dev]
-opt-level = 0
+opt-level = 2
 
 [profile.dev.package."*"]
 opt-level = 3
