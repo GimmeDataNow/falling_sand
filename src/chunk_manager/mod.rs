@@ -48,9 +48,7 @@ impl ChunkManager {
 
     /// # Functionality:
     /// Check if the chunk is loaded in the chunk map. Then it will try to save the chunk and then it removes it from the chunk map.
-    fn unload_chunk_at_coords(&mut self, chunk_x: i32, chunk_y: i32) -> Result<(), custom_error::CustomErrors> {
-        // Remove the chunk from the ChunkManager's hashmap to unload it
-        let chunk_coords: (i32, i32) = (chunk_x, chunk_y);
+    fn unload_chunk_at_coords(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
 
         // check if the chunk is loaded
         if self.map.contains_key(&chunk_coords) {
@@ -61,7 +59,6 @@ impl ChunkManager {
             // Remove the chunk from the hashmap to unload it
             self.map.remove(&chunk_coords);
             Ok(())
-            
         } else {
             // error if the chunk is not loaded
             Err(custom_error::CustomErrors::CouldNotComplete)
@@ -88,6 +85,32 @@ impl ChunkManager {
 
             // return the cell
             return Some(chunk.cells[cell_index]);
+        }
+
+        // Return None if the chunk is not found
+        None
+    }
+
+    pub fn set_cell_at_global_coords(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
+
+        // Step 1: Convert global coordinates to chunk coordinates
+        let chunk_x = coords.0 / config::CHUNK_SIZE_I32;
+        let chunk_y = coords.1 / config::CHUNK_SIZE_I32;
+
+        // Step 2: Check if the ChunkManager contains the chunk
+        if let Some(chunk) = self.map.get_mut(&(chunk_x, chunk_y)) {
+
+            // Step 3: Convert local chunk coordinates to cell coordinates
+            let local_x = coords.0.rem_euclid(config::CHUNK_SIZE_I32);
+            let local_y = coords.1.rem_euclid(config::CHUNK_SIZE_I32);
+
+            // Step 4: Access the cell in the chunk
+            let cell_index = (local_x + local_y * config::CHUNK_SIZE_I32) as usize;
+
+            chunk.cells[cell_index] = cell;
+
+            // return the cell
+            return Some(());
         }
 
         // Return None if the chunk is not found
@@ -197,11 +220,9 @@ impl ChunkManager {
                 return Some(());
             }
         }
-        else {
-            if !self.is_solid(coords).is_some() && !self.is_solid((coords.0, coords.1 + dy)).is_some() {
-                self.swap_cells_at_global_coords(coords, (coords.0, coords.1 + dy));
-                return Some(());
-            }
+        else if !self.is_solid(coords).is_some() && !self.is_solid((coords.0, coords.1 + dy)).is_some() {
+            self.swap_cells_at_global_coords(coords, (coords.0, coords.1 + dy));
+            return Some(());
         }
         None
     }

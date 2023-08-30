@@ -1,3 +1,5 @@
+use std::default;
+
 // imports
 use rand::Rng;
 use serde::{Serialize, Deserialize};
@@ -6,7 +8,7 @@ use serde::{Serialize, Deserialize};
 /// The ```CellType``` is the material of a cell
 /// # Options:
 /// The materials are: ```Air```, ```Rock```, ```Wood```, ```Sand```, ```Gunpowder```, ```Water```, ```Oil```, ```Fire```, ```Lava```, ```Acid``` ....
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum CellType {
     Air,
     Rock,
@@ -19,12 +21,8 @@ pub enum CellType {
     Oil,
     Lava,
     Acid,
+    #[default]
     AntiVoid
-}
-impl Default for CellType {
-    fn default() -> Self {
-        CellType::AntiVoid
-    }
 }
 
 /// # Functionality:
@@ -92,7 +90,7 @@ static CELL_PROPERTIES: [CellTypeProperties; 12] = [
     CellTypeProperties { name: "Oil",       cell_type: CellType::Oil,       state: StateOfAggregation::Liquid,          density: 0.9,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [55,  58,   54,  255] },
     CellTypeProperties { name: "Lava",      cell_type: CellType::Lava,      state: StateOfAggregation::Liquid,          density: 3.1,   temp_coefficient: 100.0,    flammable: false, base_temp: 298,   base_color: [255, 0,    0,   255] },
     CellTypeProperties { name: "Acid",      cell_type: CellType::Acid,      state: StateOfAggregation::Liquid,          density: 1.4,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0,   255,  0,   255] },
-    CellTypeProperties { name: "Anti-Void", cell_type: CellType::AntiVoid,  state: StateOfAggregation::ImmovableSolid,  density: 9.9,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [255, 255,  255, 255] }
+    CellTypeProperties { name: "Anti-Void", cell_type: CellType::AntiVoid,  state: StateOfAggregation::ImmovableSolid,  density: 9.9,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0, 0,  0, 255] }
 ];
 
 

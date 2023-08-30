@@ -3,7 +3,11 @@ mod config;
 
 use chunk_manager::chunks::cells::Cell;
 
+#[macro_use]
+mod macros;
 
+
+use config::{SCREEN_WIDTH_USIZE, SCREEN_HEIGHT_USIZE};
 use pixels::{Error, Pixels, SurfaceTexture};
 
 use winit::dpi::LogicalSize;
@@ -18,6 +22,7 @@ extern crate serde;
 extern crate serde_derive;
 
 
+
 use fps_counter;
 // debug
 // use std::env;
@@ -30,6 +35,9 @@ fn main() -> Result<(), Error> {
     let mut step_by_frame = false;
 
     let mut cam_pos = (0, 0);
+
+
+
     // debug section
 
     // env::set_var("RUST_BACKTRACE", "full");
@@ -62,6 +70,21 @@ fn main() -> Result<(), Error> {
 
     let mut fps_tracker = fps_counter::FPSCounter::new();
     let mut counter:usize = 0;
+
+    // build this macro to reduce some code repetition
+    macro_rules! map_key {
+        ($mand_1:expr, $mand_2:expr) => {
+            if input.key_held($mand_1) {
+                $mand_2
+            }
+        };
+        ($mand_1:expr, $mand_2:expr, $mand_3:expr) => {
+            if input.key_held($mand_1) || input.key_held($mand_2) {
+                $mand_3
+            }
+        };
+    }
+
     event_loop.run(move |event, _, control_flow| {
         
         // Draw the current frame
@@ -82,6 +105,14 @@ fn main() -> Result<(), Error> {
                 *control_flow = ControlFlow::Exit;
                 return;
             }
+
+            //key binds
+            map_key!(VirtualKeyCode::W, VirtualKeyCode::Up,     cam_pos= (cam_pos.0, cam_pos.1 + 1));
+            map_key!(VirtualKeyCode::A, VirtualKeyCode::Left,   cam_pos= (cam_pos.0 - 1, cam_pos.1));
+            map_key!(VirtualKeyCode::S, VirtualKeyCode::Down,   cam_pos= (cam_pos.0, cam_pos.1 - 1));
+            map_key!(VirtualKeyCode::D, VirtualKeyCode::Right,  cam_pos= (cam_pos.0 + 1, cam_pos.1));
+
+            map_key!(VirtualKeyCode::Return, {simulation_space.set_cell_at_global_coords(cam_pos, Cell::build_cell(chunk_manager::chunks::cells::CellType::Acid));});
             // Resize the window
             if let Some(size) = input.window_resized() {
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
@@ -144,7 +175,8 @@ fn main() -> Result<(), Error> {
                 //simulation_space.update_cell_alchemy();
             }
             window.request_redraw();
-            println!("{}", fps_tracker.tick());
+            println!("cam_pos:{:?}\r", cam_pos)
+            //println!("{}", fps_tracker.tick());
             //player.get_sim_dimensions();
             // let a = Chunk::new_with_fill(cells_layer::CellType::Sand, (0,0));
             // println!("{:#?}", Chunk::save_to_file_bin(&a));
@@ -155,22 +187,14 @@ fn main() -> Result<(), Error> {
 }
 
 impl chunk_manager::ChunkManager {
-    //fn draw(&self, cam_pos: (i32, i32), frame: &mut [u8]) {
-    //    for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-    //
-    //        
-    //        //let mut rgba = self.cells[i].color;
-    //        let rgba = self.get_cell_at_global_coords(coords).
-    //
-    //
-    //        pixel.copy_from_slice(&rgba);
-    //    }
-    //}
     fn draw_2(&mut self, cam_pos: (i32, i32), frame: &mut [u8]) {
+
         // Calculate the half width and half height of the area
-        let half_width = config::SIMULATION_WIDTH_I32 / 2;
-        let half_height = config::SIMULATION_HEIGHT_I32 / 2;
-        let mut color_map: Vec<[u8;4]> = Vec::new();
+        let half_width = config::SCREEN_WIDTH / 2;
+        let half_height = config::SCREEN_HEIGHT / 2;
+
+        // this holds all of the color data
+        let mut color_map: Vec<[u8;4]> = Vec::with_capacity(SCREEN_WIDTH_USIZE*SCREEN_HEIGHT_USIZE);
 
         // Loop through the cells within the area
         for dy in -half_width..=half_width {
@@ -180,10 +204,13 @@ impl chunk_manager::ChunkManager {
 
                 let coords = (cell_x, cell_y);
     
+                // convert the goddamn dy / dx back to a normal iterator
                 // Get the cell at the current coordinates
-                color_map.push(self.get_cell_at_global_coords(coords).unwrap_or_default().color)
+                color_map.push(self.get_cell_at_global_coords(coords).unwrap_or(Cell::default()).color)
             }
         }
+
+        // copy the color map to a frame buffer
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
             pixel.copy_from_slice(&color_map[i])
         }

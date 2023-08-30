@@ -30,3 +30,9 @@ V3 from 02.06.2023+:
 - broke movement based on density difference
 - liquids mostly fixed, but if many are simulated then errors may occur >>> fixed liquids. may still fail at density based movement
 - consider making is_inbounds() return and error instead of a bool
+
+V4 from 30.08.2023+:
++ rewrote most of the code
++ added chunks
+- neeed to fix some strange graphical aritfacts that occur by setting cells diagonally towards the coordinates ([-50; +50], ~[+200; +215])
+- consider rewriting the chunk_manager to a version that houses 2 seperate buffers, such that one buffer can be used as a reference from which the other buffer will be build and finally swap the buffers and repeat
