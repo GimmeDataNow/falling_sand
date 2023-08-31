@@ -103,6 +103,32 @@ impl ChunkManager {
         // Return None if the chunk is not found
         None
     }
+    pub fn get_cell_at_global_coords_force_load(&mut self, coords: (i32, i32)) -> Option<Cell> {
+
+        // Step 1: Convert global coordinates to chunk coordinates
+        let chunk_x = coords.0 / config::CHUNK_SIZE_I32;
+        let chunk_y = coords.1 / config::CHUNK_SIZE_I32;
+
+        if !self.map.contains_key(&(chunk_x, chunk_y)) {
+            ChunkManager::get_or_load_chunk(self, (chunk_x, chunk_y));
+        }
+        // Step 2: Check if the ChunkManager contains the chunk
+        if let Some(chunk) = self.map.get(&(chunk_x, chunk_y)) {
+
+            // Step 3: Convert local chunk coordinates to cell coordinates
+            let local_x = coords.0.rem_euclid(config::CHUNK_SIZE_I32);
+            let local_y = coords.1.rem_euclid(config::CHUNK_SIZE_I32);
+
+            // Step 4: Access the cell in the chunk
+            let cell_index = (local_x + local_y * config::CHUNK_SIZE_I32) as usize;
+
+            // return the cell
+            return Some(chunk.cells[cell_index]);
+        }
+
+        // Return None if the chunk is not found
+        None
+    }
 
     pub fn set_cell_at_global_coords(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
 

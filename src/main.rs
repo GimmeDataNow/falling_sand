@@ -111,9 +111,9 @@ fn main() -> Result<(), Error> {
             map_key!(VirtualKeyCode::A, VirtualKeyCode::Left,   cam_pos= (cam_pos.0 - 1, cam_pos.1));
             map_key!(VirtualKeyCode::S, VirtualKeyCode::Down,   cam_pos= (cam_pos.0, cam_pos.1 - 1));
             map_key!(VirtualKeyCode::D, VirtualKeyCode::Right,  cam_pos= (cam_pos.0 + 1, cam_pos.1));
-            map_key!(VirtualKeyCode::F12, simulation_space.simple_save(&(0, 0)).is_ok());
-
             map_key!(VirtualKeyCode::Return, {simulation_space.set_cell_at_global_coords(cam_pos, Cell::build_cell(chunk_manager::chunks::cells::CellType::Acid));});
+            map_key!(VirtualKeyCode::F12, simulation_space.simple_save(&(0, 0)));
+            
             // Resize the window
             if let Some(size) = input.window_resized() {
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
@@ -176,7 +176,7 @@ fn main() -> Result<(), Error> {
                 //simulation_space.update_cell_alchemy();
             }
             window.request_redraw();
-            println!("cam_pos:{:?}\r", cam_pos)
+            println!("\rcam_pos:{:?}", cam_pos)
             //println!("{}", fps_tracker.tick());
             //player.get_sim_dimensions();
             // let a = Chunk::new_with_fill(cells_layer::CellType::Sand, (0,0));
@@ -196,19 +196,19 @@ impl chunk_manager::ChunkManager {
 
         // this holds all of the color data
         let mut color_map: Vec<[u8;4]> = Vec::new();
-        println!("{}", color_map.len());
+        //println!("{}", color_map.len());
 
         // Loop through the cells within the area
-        for dy in -half_width..=half_width {
-            for dx in -half_height..=half_height {
+        for dy in -half_width..half_width {
+            for dx in -half_height..half_height {
                 let cell_x = cam_pos.0 + dx;
-                let cell_y = cam_pos.1 + dy;
+                let cell_y = cam_pos.1 - dy;
 
                 let coords = (cell_x, cell_y);
     
                 // convert the goddamn dy / dx back to a normal iterator
                 // Get the cell at the current coordinates
-                color_map.push(self.get_cell_at_global_coords(coords).unwrap_or(Cell::default()).color)
+                color_map.push(self.get_cell_at_global_coords_force_load(coords).unwrap_or(Cell::default()).color)
             }
         }
         // copy the color map to a frame buffer
