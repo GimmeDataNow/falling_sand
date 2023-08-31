@@ -75,7 +75,7 @@ fn main() -> Result<(), Error> {
     macro_rules! map_key {
         ($mand_1:expr, $mand_2:expr) => {
             if input.key_held($mand_1) {
-                $mand_2
+                $mand_2;
             }
         };
         ($mand_1:expr, $mand_2:expr, $mand_3:expr) => {
@@ -111,6 +111,7 @@ fn main() -> Result<(), Error> {
             map_key!(VirtualKeyCode::A, VirtualKeyCode::Left,   cam_pos= (cam_pos.0 - 1, cam_pos.1));
             map_key!(VirtualKeyCode::S, VirtualKeyCode::Down,   cam_pos= (cam_pos.0, cam_pos.1 - 1));
             map_key!(VirtualKeyCode::D, VirtualKeyCode::Right,  cam_pos= (cam_pos.0 + 1, cam_pos.1));
+            map_key!(VirtualKeyCode::F12, simulation_space.simple_save(&(0, 0)).is_ok());
 
             map_key!(VirtualKeyCode::Return, {simulation_space.set_cell_at_global_coords(cam_pos, Cell::build_cell(chunk_manager::chunks::cells::CellType::Acid));});
             // Resize the window
@@ -198,8 +199,8 @@ impl chunk_manager::ChunkManager {
         println!("{}", color_map.len());
 
         // Loop through the cells within the area
-        for dx in -half_width..=half_width {
-            for dy in -half_height..=half_height {
+        for dy in -half_width..=half_width {
+            for dx in -half_height..=half_height {
                 let cell_x = cam_pos.0 + dx;
                 let cell_y = cam_pos.1 + dy;
 

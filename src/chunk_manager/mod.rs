@@ -46,6 +46,19 @@ impl ChunkManager {
         self.map.get_mut(&chunk_coords).unwrap()
     }
 
+    pub fn simple_save(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
+        // check if the chunk is loaded
+        if self.map.contains_key(&chunk_coords) {
+            
+            // Save the chunk to disk before unloading if needed
+            self.map.get(&chunk_coords).ok_or(custom_error::CustomErrors::CouldNotComplete)?.save_chunk()?;
+            
+            Ok(())
+        } else {
+            // error if the chunk is not loaded
+            Err(custom_error::CustomErrors::CouldNotComplete)
+        }
+    }
     /// # Functionality:
     /// Check if the chunk is loaded in the chunk map. Then it will try to save the chunk and then it removes it from the chunk map.
     fn unload_chunk_at_coords(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
