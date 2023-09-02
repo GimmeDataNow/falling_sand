@@ -24,11 +24,10 @@ extern crate serde_derive;
 use fps_counter;
 
 fn main() -> Result<(), Error> {
-
-
-    let mut step_by_frame = false;
     let mut cam_pos = (0, 0);
     let mut fps_tracker = fps_counter::FPSCounter::new();
+    let mut step_by_frame = false;
+    
 
     // builds the Widow
     let event_loop = EventLoop::new();
@@ -85,7 +84,7 @@ fn main() -> Result<(), Error> {
         if input.update(&event) {
 
             // Exit events
-            if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
+            if input.key_pressed(VirtualKeyCode::Escape) || input.close_requested() {
                 *control_flow = ControlFlow::Exit;
                 return;
             }
@@ -134,9 +133,9 @@ fn main() -> Result<(), Error> {
 
                 // Render everything together
                 let render_result = pixels.render_with(|encoder, render_target, context| {
+
                     // Render the world texture
                     context.scaling_renderer.render(encoder, render_target);
-
                     // Render egui
                     framework.render(encoder, render_target, context);
 
@@ -164,7 +163,6 @@ impl chunk_manager::ChunkManager {
 
         // this holds all of the color data
         let mut color_map: Vec<[u8;4]> = Vec::new();
-        //println!("{}", color_map.len());
 
         // Loop through the cells within the area
         for dy in -half_width..half_width {

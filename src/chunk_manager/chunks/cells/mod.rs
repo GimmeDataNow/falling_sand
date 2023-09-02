@@ -164,10 +164,6 @@ impl Cell {
             temp: ref_cell_properties.base_temp,  
         }
     }
-
-    /// # Functionality:
-    /// sets the cell to be air.
-    pub fn set_air() -> Cell { Self::build_cell(CellType::Air) }
 }
 
 
