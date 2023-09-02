@@ -4,5 +4,7 @@ pub enum CustomErrors {
     None,
     OutOfBounds,
     UndefinedBehavior,
-    CouldNotComplete
+    CouldNotComplete,
+    FailedToSave,
+    FailedToUnload
 }

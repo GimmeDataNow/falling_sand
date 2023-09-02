@@ -38,6 +38,18 @@ impl ChunkManager {
     }
 
     /// # Functionality:
+    /// Convert the coordinates to chunk coordinates for further processing
+    fn to_chunk_coords(global_coords: (i32, i32)) -> (i32, i32) {
+        (global_coords.0 / config::CHUNK_SIZE_I32, global_coords.1 / config::CHUNK_SIZE_I32)
+    }
+
+    /// # Functionality:
+    /// Cenvert the coordinates to local in-chunk coordinates for further processing
+    fn to_local(global_coords: (i32, i32)) -> (i32, i32) {
+        (global_coords.0.rem_euclid(config::CHUNK_SIZE_I32), global_coords.1.rem_euclid(config::CHUNK_SIZE_I32))
+    }
+
+    /// # Functionality:
     /// Check if the chunk is loaded in the chunk map. If not, it inserts the loaded chunk into the chunk map and returns it.
     fn get_or_load_chunk(&mut self, chunk_coords: (i32, i32)) -> &mut chunks::Chunk {
         if !self.map.contains_key(&chunk_coords) {
@@ -56,12 +68,13 @@ impl ChunkManager {
             Ok(())
         } else {
             // error if the chunk is not loaded
-            Err(custom_error::CustomErrors::CouldNotComplete)
+            Err(custom_error::CustomErrors::FailedToSave)
         }
     }
+
     /// # Functionality:
     /// Check if the chunk is loaded in the chunk map. Then it will try to save the chunk and then it removes it from the chunk map.
-    fn unload_chunk_at_coords(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
+    pub fn unload_chunk_at_coords(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
 
         // check if the chunk is loaded
         if self.map.contains_key(&chunk_coords) {
@@ -74,7 +87,7 @@ impl ChunkManager {
             Ok(())
         } else {
             // error if the chunk is not loaded
-            Err(custom_error::CustomErrors::CouldNotComplete)
+            Err(custom_error::CustomErrors::FailedToUnload)
         }
     }
 
@@ -83,18 +96,16 @@ impl ChunkManager {
     pub fn get_cell_at_global_coords(&self, coords: (i32, i32)) -> Option<Cell> {
 
         // Step 1: Convert global coordinates to chunk coordinates
-        let chunk_x = coords.0 / config::CHUNK_SIZE_I32;
-        let chunk_y = coords.1 / config::CHUNK_SIZE_I32;
+        let chunk_coords: (i32, i32) = ChunkManager::to_chunk_coords(coords);
 
         // Step 2: Check if the ChunkManager contains the chunk
-        if let Some(chunk) = self.map.get(&(chunk_x, chunk_y)) {
+        if let Some(chunk) = self.map.get(&chunk_coords) {
 
             // Step 3: Convert local chunk coordinates to cell coordinates
-            let local_x = coords.0.rem_euclid(config::CHUNK_SIZE_I32);
-            let local_y = coords.1.rem_euclid(config::CHUNK_SIZE_I32);
+            let local_coords: (i32, i32) = ChunkManager::to_local(coords);
 
             // Step 4: Access the cell in the chunk
-            let cell_index = (local_x + local_y * config::CHUNK_SIZE_I32) as usize;
+            let cell_index = (local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize;
 
             // return the cell
             return Some(chunk.cells[cell_index]);
@@ -103,6 +114,9 @@ impl ChunkManager {
         // Return None if the chunk is not found
         None
     }
+
+    /// # Functionality:
+    /// Set a cell at a given coordinate, even if the chunk is not loaded
     pub fn get_cell_at_global_coords_force_load(&mut self, coords: (i32, i32)) -> Option<Cell> {
 
         // Step 1: Convert global coordinates to chunk coordinates
@@ -130,21 +144,21 @@ impl ChunkManager {
         None
     }
 
+    /// # Functionality:
+    /// Set a cell at a given coordinate, given that the chunk is loaded
     pub fn set_cell_at_global_coords(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
 
         // Step 1: Convert global coordinates to chunk coordinates
-        let chunk_x = coords.0 / config::CHUNK_SIZE_I32;
-        let chunk_y = coords.1 / config::CHUNK_SIZE_I32;
+        let chunk_coords: (i32, i32) = ChunkManager::to_chunk_coords(coords);
 
         // Step 2: Check if the ChunkManager contains the chunk
-        if let Some(chunk) = self.map.get_mut(&(chunk_x, chunk_y)) {
+        if let Some(chunk) = self.map.get_mut(&chunk_coords) {
 
             // Step 3: Convert local chunk coordinates to cell coordinates
-            let local_x = coords.0.rem_euclid(config::CHUNK_SIZE_I32);
-            let local_y = coords.1.rem_euclid(config::CHUNK_SIZE_I32);
+            let local_coords: (i32, i32) = ChunkManager::to_local(coords);
 
             // Step 4: Access the cell in the chunk
-            let cell_index = (local_x + local_y * config::CHUNK_SIZE_I32) as usize;
+            let cell_index = (local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize;
 
             chunk.cells[cell_index] = cell;
 
@@ -266,7 +280,7 @@ impl ChunkManager {
         None
     }
 
-    fn diagonal(chunk_manager: &mut ChunkManager, x: i32, y: i32, density_based: bool) -> Option<()> {
+    fn diagonal(chunk_manager: &mut ChunkManager, coords: (i32, i32), density_based: bool) -> Option<()> {
         todo!()
     }
     fn sides_check(&self, coords: (i32, i32), density_based: bool, celltype: CellType) -> [bool; 2] {

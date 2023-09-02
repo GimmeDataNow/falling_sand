@@ -1,5 +1,3 @@
-use std::default;
-
 // imports
 use rand::Rng;
 use serde::{Serialize, Deserialize};

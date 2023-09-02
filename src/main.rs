@@ -1,13 +1,14 @@
 mod chunk_manager;
 mod config;
+use crate::debug_gui::Framework;
+mod debug_gui;
 
 use chunk_manager::chunks::cells::Cell;
 
 #[macro_use]
 mod macros;
 
-
-use config::{SCREEN_WIDTH_USIZE, SCREEN_HEIGHT_USIZE};
+// foreign imports
 use pixels::{Error, Pixels, SurfaceTexture};
 
 use winit::dpi::LogicalSize;
@@ -16,32 +17,21 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-
-
 use fps_counter;
-// debug
-// use std::env;
-// use backtrace::Backtrace;
 
 // here are the env variables that toggle dev tools
 const TOGGLE_DESCRIPTOR:bool = true;
 
 fn main() -> Result<(), Error> {
+
+
     let mut step_by_frame = false;
-
     let mut cam_pos = (0, 0);
-
-
-
-    // debug section
-
-    // env::set_var("RUST_BACKTRACE", "full");
-    // let bt = Backtrace::new();
+    let mut fps_tracker = fps_counter::FPSCounter::new();
 
     // builds the Widow
     let event_loop = EventLoop::new();
@@ -68,9 +58,6 @@ fn main() -> Result<(), Error> {
     // this is where the magic starts
     let mut simulation_space = chunk_manager::ChunkManager::new();
 
-    let mut fps_tracker = fps_counter::FPSCounter::new();
-    let mut counter:usize = 0;
-
     // build this macro to reduce some code repetition
     macro_rules! map_key {
         ($mand_1:expr, $mand_2:expr) => {
@@ -89,7 +76,7 @@ fn main() -> Result<(), Error> {
         
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
-            simulation_space.draw_2(cam_pos, pixels.get_frame_mut(),);
+            simulation_space.draw_2(cam_pos, pixels.frame_mut(),);
             if let Err(err) = pixels.render() {
                 println!("{:?}", err);
                 *control_flow = ControlFlow::Exit;
@@ -122,66 +109,13 @@ fn main() -> Result<(), Error> {
                     return;
                 }
             }
-
-
-            {
-                let mouse_pos = match input.mouse() {
-                    Some(mouse_position_raw) => ((mouse_position_raw.0 / config::SCREEN_SCALE).trunc() as i32, (mouse_position_raw.1 / config::SCREEN_SCALE).trunc() as i32) ,
-                    None => (0, 0),
-                };
-
-                //#[allow(unused_parens)]
-                //match simulation_space.get_index_checked(mouse_pos.0, mouse_pos.1) {
-                //    Ok(i) => {
-                //        
-                //        //if input.mouse_held(1) {  simulation_space.paint_bush(mouse_pos, 5, cells::CellType::Sand, cells::BrushType::Circle) }
-                //        //
-                //        //if input.mouse_held(2) { 
-                //        //    let a = cells::CellTypeProperties::rand_cell_properties();
-                //        //    cells::Cell::build_cell(a.cell_type);
-                //        //}
-                //        // toggles the step by frame mode
-                //        if input.key_pressed(VirtualKeyCode::Return) { step_by_frame = !step_by_frame }
-                //        if input.key_pressed(VirtualKeyCode::Space) {
-                //            simulation_space.update_cell_behaviour();
-                //            //simulation_space.update_cell_alchemy();
-                //        }
-                //        
-                //        // move between the possible CellTypes
-                //        if input.key_pressed(VirtualKeyCode::P) { counter += 1 }
-                //
-                //
-                //        //if TOGGLE_DESCRIPTOR && simulation_space.index_inbounds(i) {
-                //        //    let a = simulation_space.cells[i as usize].get_cell_properties().name;
-                //        //    
-                //        //    
-                //        //    let b = cells::CellTypeProperties::get_cell_properties_by_number(&counter);
-                //        //
-                //        //    if input.mouse_held(0) { simulation_space.paint_bush(mouse_pos, 5, b.cell_type, cells::BrushType::Circle);}
-                //        //    
-                //        //    //print!("The selected Material is {} | You are looking at {}                                          \r",b.name, a);
-                //        //}
-                //        
-                //    },
-                //    // discard errors
-                //    Err(_) => (),
-                //}
-            }
-
-
-            // player.player_movement(&simulation_space, &input);
-            pixels.get_frame_mut();
+            
+            pixels.frame_mut();
             if !step_by_frame {
                 //simulation_space.update_cell_behaviour();
                 //simulation_space.update_cell_alchemy();
             }
             window.request_redraw();
-            println!("\rcam_pos:{:?}", cam_pos)
-            //println!("{}", fps_tracker.tick());
-            //player.get_sim_dimensions();
-            // let a = Chunk::new_with_fill(cells_layer::CellType::Sand, (0,0));
-            // println!("{:#?}", Chunk::save_to_file_bin(&a));
-            //println!("{:?}", bt);
         }
     });
     
@@ -201,6 +135,7 @@ impl chunk_manager::ChunkManager {
         // Loop through the cells within the area
         for dy in -half_width..half_width {
             for dx in -half_height..half_height {
+
                 let cell_x = cam_pos.0 + dx;
                 let cell_y = cam_pos.1 - dy;
 
