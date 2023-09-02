@@ -23,9 +23,6 @@ extern crate serde_derive;
 
 use fps_counter;
 
-// here are the env variables that toggle dev tools
-const TOGGLE_DESCRIPTOR:bool = true;
-
 fn main() -> Result<(), Error> {
 
 
@@ -48,11 +45,20 @@ fn main() -> Result<(), Error> {
 
     window.set_cursor_icon(winit::window::CursorIcon::Crosshair);
 
-    // creates a img Buffer
-    let mut pixels = {
+    let (mut pixels, mut framework) = {
         let window_size = window.inner_size();
+        let scale_factor = window.scale_factor() as f32;
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(config::SCREEN_WIDTH as u32, config::SCREEN_HEIGHT as u32, surface_texture)?
+        let pixels = Pixels::new(config::SCREEN_WIDTH as u32, config::SCREEN_HEIGHT_USIZE as u32, surface_texture)?;
+        let framework = Framework::new(
+            &event_loop,
+            window_size.width,
+            window_size.height,
+            scale_factor,
+            &pixels,
+        );
+
+        (pixels, framework)
     };
 
     // this is where the magic starts
@@ -72,17 +78,8 @@ fn main() -> Result<(), Error> {
         };
     }
 
+    // this is a mess. needs
     event_loop.run(move |event, _, control_flow| {
-        
-        // Draw the current frame
-        if let Event::RedrawRequested(_) = event {
-            simulation_space.draw_2(cam_pos, pixels.frame_mut(),);
-            if let Err(err) = pixels.render() {
-                println!("{:?}", err);
-                *control_flow = ControlFlow::Exit;
-                return;
-            } 
-        }
 
         // Handle input events
         if input.update(&event) {
@@ -91,6 +88,9 @@ fn main() -> Result<(), Error> {
             if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
                 *control_flow = ControlFlow::Exit;
                 return;
+            }
+            if let Some(scale_factor) = input.scale_factor() {
+                framework.scale_factor(scale_factor);
             }
 
             //key binds
@@ -104,10 +104,11 @@ fn main() -> Result<(), Error> {
             // Resize the window
             if let Some(size) = input.window_resized() {
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
-                    println!("pixels.resize_surface() failed: {err}");
+                    println!("pixels.resize_surface {}", err);
                     *control_flow = ControlFlow::Exit;
                     return;
                 }
+                framework.resize(size.width, size.height);
             }
             
             pixels.frame_mut();
@@ -116,6 +117,39 @@ fn main() -> Result<(), Error> {
                 //simulation_space.update_cell_alchemy();
             }
             window.request_redraw();
+        }
+
+        match event {
+            Event::WindowEvent { event, .. } => {
+                // Update egui inputs
+                framework.handle_event(&event);
+            }
+            // Draw the current frame
+            Event::RedrawRequested(_) => {
+                // Draw the world
+                simulation_space.draw_2(cam_pos, pixels.frame_mut());
+
+                // Prepare egui
+                framework.prepare(&window, &mut cam_pos, &mut fps_tracker);
+
+                // Render everything together
+                let render_result = pixels.render_with(|encoder, render_target, context| {
+                    // Render the world texture
+                    context.scaling_renderer.render(encoder, render_target);
+
+                    // Render egui
+                    framework.render(encoder, render_target, context);
+
+                    Ok(())
+                });
+
+                // Basic error handling
+                if let Err(err) = render_result {
+                    println!("pixels.render {}", err);
+                    *control_flow = ControlFlow::Exit;
+                }
+            }
+            _ => (),
         }
     });
     

@@ -9,8 +9,8 @@ edition = "2021"
 rand = "0.8.5"
 
 pixels = "0.13.0"
-winit = "0.27.0"
-winit_input_helper = "0.13"
+winit = "0.28.6"
+winit_input_helper = "0.14.1"
 egui ="0.22.0"
 egui-winit ={ version = "0.22.0", default-features = false, features = ["links"]}
 egui-wgpu = "0.22.0"

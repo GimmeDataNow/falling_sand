@@ -1,6 +1,5 @@
-use egui::{ClippedPrimitive, Context, TexturesDelta};
+use egui::{ClippedPrimitive, Context, TexturesDelta, RichText};
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
-use egui_winit::winit::event::WindowEvent;
 use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
@@ -60,7 +59,7 @@ impl Framework {
     }
 
     /// Handle input events from the window manager.
-    pub(crate) fn handle_event(&mut self, event: &WindowEvent) {
+    pub(crate) fn handle_event(&mut self, event: &winit::event::WindowEvent) {
         let _ = self.egui_state.on_event(&self.egui_ctx, event);
     }
 
@@ -77,12 +76,12 @@ impl Framework {
     }
 
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &egui_winit::winit::window::Window) {
+    pub(crate) fn prepare(&mut self, window: &Window, coords:&mut (i32, i32), fps: &mut fps_counter::FPSCounter) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx);
+            self.gui.ui(egui_ctx, coords, fps);
         });
 
         self.textures.append(output.textures_delta);
@@ -145,30 +144,34 @@ impl Gui {
     }
 
     /// Create the UI using egui.
-    fn ui(&mut self, ctx: &Context) {
-        egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("About...").clicked() {
-                        self.window_open = true;
-                        ui.close_menu();
-                    }
-                })
-            });
-        });
+    fn ui(&mut self, ctx: &Context, coords: &mut (i32, i32), fps: &mut fps_counter::FPSCounter) {
+        //egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
+        //    //egui::menu::bar(ui, |ui| {
+        //    //    ui.menu_button("File", |ui| {
+        //    //        if ui.button("About...").clicked() {
+        //    //            self.window_open = true;
+        //    //            ui.close_menu();
+        //    //        }
+        //    //    })
+        //    //});
+        //});
 
-        egui::Window::new("Hello, egui!")
+        egui::Window::new("Debug")
             .open(&mut self.window_open)
             .show(ctx, |ui| {
-                ui.label("This example demonstrates using egui with pixels.");
-                ui.label("Made with 💖 in San Francisco!");
-
-                ui.separator();
-
-                ui.horizontal(|ui| {
+                ui.horizontal(|ui|{
                     ui.spacing_mut().item_spacing.x /= 2.0;
-                    ui.label("Learn more about egui at");
-                    ui.hyperlink("https://docs.rs/egui");
+                    ui.label(RichText::new("Position:").strong());
+                    ui.spacing();
+                    ui.label("x:");
+                    ui.add(egui::DragValue::new(&mut coords.0));
+                    ui.label("y:");
+                    ui.add(egui::DragValue::new(&mut coords.1));
+                });
+                ui.horizontal(|ui|{
+                    ui.label(egui::RichText::new("FPS: ").strong());
+                    ui.label(format!("{:#?}", fps.tick()));
+
                 });
             });
     }
