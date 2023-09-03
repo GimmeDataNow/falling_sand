@@ -10,7 +10,7 @@ use self::chunks::cells::{CellType, Cell, CellTypeProperties, StateOfAggregation
 
 
 /// # Functionality:
-/// This contain the `HashMap` containing the chunks with the chunk coordinates as the keys.
+/// This contain the `HashMap` containing the chunks with the `chunk-coordinates` as the key.
 /// # Notice:
 /// This should probably implement `Singletons` to ensure that there is only one instance of the `ChunkManager`.
 pub struct ChunkManager {
@@ -42,19 +42,19 @@ impl ChunkManager {
     }
 
     /// # Functionality:
-    /// Convert the coordinates to chunk coordinates for further processing
+    /// Convert the coordinates to `chunk-coordinates` for further processing.
     fn to_chunk_coords(global_coords: (i32, i32)) -> (i32, i32) {
         (global_coords.0 / config::CHUNK_SIZE_I32, global_coords.1 / config::CHUNK_SIZE_I32)
     }
 
     /// # Functionality:
-    /// Cenvert the coordinates to local in-chunk coordinates for further processing
+    /// Cenvert the coordinates to local in-chunk coordinates for further processing.
     fn to_local(global_coords: (i32, i32)) -> (i32, i32) {
         (global_coords.0.rem_euclid(config::CHUNK_SIZE_I32), global_coords.1.rem_euclid(config::CHUNK_SIZE_I32))
     }
 
     /// # Functionality:
-    /// Check if the chunk is loaded in the chunk map. If not, it inserts the loaded chunk into the chunk map and returns it.
+    /// Check if the `Chunk` is loaded in the `chunk-map`. If not, it inserts the loaded chunk into the `chunk-map` and returns it.
     fn get_or_load_chunk(&mut self, chunk_coords: (i32, i32)) -> &mut chunks::Chunk {
         if !self.map.contains_key(&chunk_coords) {
             self.map.insert(chunk_coords, chunks::Chunk::load_chunk(chunk_coords));
@@ -77,7 +77,7 @@ impl ChunkManager {
     }
 
     /// # Functionality:
-    /// Check if the chunk is loaded in the chunk map. Then it will try to save the chunk and then it removes it from the chunk map.
+    /// Check if the `Chunk` is loaded in the `chunk-map`. Then it will try to save the `Chunk` and then it removes it from the `chunk-map`.
     pub fn unload_chunk_at_coords(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
 
         // check if the chunk is loaded
@@ -96,7 +96,7 @@ impl ChunkManager {
     }
 
     /// # Functionality:
-    /// Retreives the cell with the given coordinates and returns an Option<Cell>. Returns None if the cell is not loaded.
+    /// Retreives the `Cell` with the given coordinates and returns an `Option<Cell>`. Returns `None` if the cell is not loaded.
     pub fn get_cell_at_global_coords(&self, coords: (i32, i32)) -> Option<Cell> {
 
         // Step 1: Convert global coordinates to chunk coordinates
@@ -120,7 +120,7 @@ impl ChunkManager {
     }
 
     /// # Functionality:
-    /// Set a cell at a given coordinate, even if the chunk is not loaded
+    /// Set a `Cell` at a given coordinate, even if the `Chunk` is not loaded
     pub fn get_cell_at_global_coords_force_load(&mut self, coords: (i32, i32)) -> Option<Cell> {
 
         // Step 1: Convert global coordinates to chunk coordinates
@@ -149,7 +149,7 @@ impl ChunkManager {
     }
 
     /// # Functionality:
-    /// Set a cell at a given coordinate, given that the chunk is loaded
+    /// Set a `Cell` at a given coordinate, given that the `Chunk` is loaded
     pub fn set_cell_at_global_coords(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
 
         // Step 1: Convert global coordinates to chunk coordinates

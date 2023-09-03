@@ -7,16 +7,15 @@ use crate::chunk_manager::custom_error as Err;
 use cells::Cell;
 use cells::CellType;
 use crate::config::CHUNK_LENGTH_USIZE;
-use crate::config::CHUNK_SIZE_I32;
 
 // foreign imports
 use serde_big_array::BigArray;
 use std::fs;
 
 /// # Functionality:
-/// This struct contains both the chunk coordinates and the actual chunk containing the cells. 
+/// This struct contains both the chunk coordinates and the actual cells. 
 /// 
-/// This has to use serde_big_array crate to derive the serialization and deserialization functions since they are not serializable by default (due to their size).
+/// This has to use `serde_big_array` crate to derive the serialization and deserialization functions since they are not serializable by default (due to their size).
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chunk {
     pub chunk_coordinates: (i32, i32),
@@ -40,20 +39,20 @@ impl From<std::io::Error> for Err::CustomErrors {
 impl Chunk {
 
     /// # Functionality:
-    /// returns a filled ```Chunk``` with the given ```CellType``` and ```(x,y)``` chunk-coordinates.
+    /// returns a filled `Chunk` with the given `CellType` and `(x,y)` chunk-coordinates.
     pub fn new_with_fill(cell_type: CellType, chunk_pos: (i32, i32)) -> Chunk {
         let cell: Cell = Cell::build_cell(cell_type);
         Chunk { chunk_coordinates: chunk_pos, cells: [cell; CHUNK_LENGTH_USIZE],}
     }
 
     /// # Functionality:
-    /// gets the save path of the chunk with the given coordinates. This uses the ron fileformat.
+    /// gets the save `path` of the `Chunk` with the given coordinates. This uses the `.ron` fileformat.
     pub fn get_save_path(coords: (i32, i32)) -> String {
         coords.0.to_string() + "|" + &coords.1.to_string() + ".ron"
     }
 
     /// # Functionality:
-    /// Writes the given chunk to a file with the appropriate file path.
+    /// Writes the given `Chunk` to a file with the appropriate file `path`.
     pub fn save_chunk(&self) -> Result<(), Err::CustomErrors> {
 
         // get the save path
@@ -69,7 +68,7 @@ impl Chunk {
     }
 
     /// # Functionality:
-    /// Reads a chunk form a file path and returns either a chunk or an error.
+    /// Reads a `Chunk` form a file `path` and returns either a `Chunk` or a `CustomErrors`.
     pub fn get_from_file(file_path: &str) -> Result<Chunk, Err::CustomErrors> {
 
         // from file to ron format or escape
@@ -83,56 +82,10 @@ impl Chunk {
     }
 
     /// # Functionality:
-    /// Load a chunk from a file or returns a default chunk.
+    /// Load a `Chunk` from a file or returns a default `Chunk`.
     pub fn load_chunk(coords: (i32, i32)) -> Chunk {
         let file_path: &String = &Chunk::get_save_path(coords);
         Chunk::get_from_file(file_path).unwrap_or(Chunk::default())
-    }
-
-    /// # Functionality:
-    /// checks whether the given coordinates are within the the bounds of the chunk.
-    fn is_inbounds(&self, coords: (i32, i32)) -> Option<()> {
-
-        // turns the boolean return into an optional where the SOME option will represent the true boolean
-        // this will hopefully make it a hell of a lot easier to implement in other functions
-        (coords.0 > 0 || coords.0 < CHUNK_SIZE_I32 || coords.1 > 0 || coords.1 < CHUNK_SIZE_I32).then(|| ())
-    }
-
-    /// # Functionality:
-    /// Returns the cell index of the chunk based on the global coordinates.
-    fn get_cell_coordinate(coords: (i32, i32)) -> usize {
-
-        // not sure how this works but gippy gave me this
-        let new_coords: (i32, i32) = (
-            (coords.0.rem_euclid(CHUNK_SIZE_I32) + CHUNK_SIZE_I32) % CHUNK_SIZE_I32,
-            (coords.1.rem_euclid(CHUNK_SIZE_I32) + CHUNK_SIZE_I32) % CHUNK_SIZE_I32,
-        );
-        (new_coords.0 + new_coords.1 * CHUNK_SIZE_I32) as usize
-    }
-
-    /// # Functionality:
-    /// Returns an `Option<cell>` given the global coordinates. Returns `None` if the global coordinate are not inbounds.
-    fn get_cell_local(&self, coords: (i32, i32)) -> Option<Cell> {
-
-        // Bounds checking
-        self.is_inbounds(coords)?;
-
-        // retun the cell
-        Some(self.cells[Chunk::get_cell_coordinate(coords)])
-    }
-
-    /// # Functionality:
-    /// Replaces the cell at the given coordinate with the given cell.
-    fn set_cell_local(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
-
-        // Bounds checking
-        self.is_inbounds(coords)?;
-
-        // changes the cell
-        self.cells[Chunk::get_cell_coordinate(coords)] = cell;
-
-        // a return value i guess?
-        Some(())
     }
 }
 
