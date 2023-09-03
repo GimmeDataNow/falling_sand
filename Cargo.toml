@@ -10,6 +10,8 @@ edition = "2021"
 #used for random numbers
 rand = "0.8.5"
 
+bresenham = "0.1.1"
+
 pixels = "0.13.0"
 winit = "0.28.6"
 winit_input_helper = "0.14.1"
