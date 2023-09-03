@@ -1,10 +1,13 @@
+//module rules;
+#![allow(dead_code)]
+
+// my imports
 pub mod chunks;
 mod custom_error;
-
+mod renderer;
 use crate::config;
 use self::chunks::cells::{CellType, Cell, CellTypeProperties, StateOfAggregation};
 
-// should prob only have one of these active at any given time, but I don't quite understand Singletons yet
 
 /// # Functionality:
 /// This contain the `HashMap` containing the chunks with the chunk coordinates as the keys.
@@ -14,6 +17,7 @@ pub struct ChunkManager {
     pub map: fnv::FnvHashMap<(i32, i32), chunks::Chunk>
 }
 
+// should prob only have one of these active at any given time, but I don't quite understand Singletons yet
 impl ChunkManager {
 
     /// # Functionality:
@@ -280,10 +284,10 @@ impl ChunkManager {
         None
     }
 
-    fn diagonal(chunk_manager: &mut ChunkManager, coords: (i32, i32), density_based: bool) -> Option<()> {
+    fn diagonal(_chunk_manager: &mut ChunkManager, _coords: (i32, i32), _density_based: bool) -> Option<()> {
         todo!()
     }
-    fn sides_check(&self, coords: (i32, i32), density_based: bool, celltype: CellType) -> [bool; 2] {
+    fn sides_check(&self, _coords: (i32, i32), _density_based: bool, _celltype: CellType) -> [bool; 2] {
         todo!()
     }
     

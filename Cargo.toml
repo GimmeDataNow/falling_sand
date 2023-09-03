@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+#used for random numbers
 rand = "0.8.5"
 
 pixels = "0.13.0"
@@ -14,18 +16,24 @@ winit_input_helper = "0.14.1"
 egui ="0.22.0"
 egui-winit ={ version = "0.22.0", default-features = false, features = ["links"]}
 egui-wgpu = "0.22.0"
+
+# log
 env_logger ="0.10.0"
 error-iter = "0.4.1"
 log = "0.4.20"
 
-
+# used for the chunk manager
 fnv = "1.0.7"
 
+# serialise/deserialise
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0.180"
-ron = "0.8"
 serde-big-array = "0.5.1"
 
+# file management
+ron = "0.8"
+
+#fps tracker
 fps_counter = "2.0.0"
 
 [features]
@@ -40,11 +48,11 @@ opt-level = 2
 opt-level = 3
 
 [profile.release]
-opt-level = "z"
+opt-level = 3
 lto = "thin"
 strip = true
 codegen-units = 1
 panic = "abort"
 
 [profile.release.package."*"]
-opt-level = "z"
+opt-level = 3

@@ -1,3 +1,5 @@
+//module rules;
+#![allow(dead_code)]
 // imports
 use rand::Rng;
 use serde::{Serialize, Deserialize};
@@ -106,14 +108,6 @@ impl CellTypeProperties {
     /// # Panic behaviour:
     /// Panics if the length of ```CELL_PROPERTIES < 1```
     pub fn get_cell_properties<'a>(cell_type: CellType) -> &'a CellTypeProperties { &CELL_PROPERTIES[cell_type as usize] }
-
-    /// # Functionality:
-    /// This function returns the ```CellType``` of the cell based on the ```selection``` counter.
-    pub fn get_celltype_by_number(selection: &usize) -> CellType { CELL_PROPERTIES[selection % CELL_PROPERTIES.len()].cell_type }
-
-    /// # Functionality:
-    /// This function returns the ```CellTypeProperties``` of the cell based on the ```selection``` counter.
-    pub fn get_cell_properties_by_number(selection: &usize) -> CellTypeProperties { *Self::get_cell_properties(Self::get_celltype_by_number(selection)) }
 }
 
 /// # Functionality:

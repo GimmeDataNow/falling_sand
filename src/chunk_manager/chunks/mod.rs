@@ -1,15 +1,17 @@
-pub mod cells;
+//module rules;
+#![allow(dead_code)]
 
+// my imports
+pub mod cells;
 use crate::chunk_manager::custom_error as Err;
 use cells::Cell;
 use cells::CellType;
-
-use serde_big_array::BigArray;
-
-use std::fs;
-
 use crate::config::CHUNK_LENGTH_USIZE;
 use crate::config::CHUNK_SIZE_I32;
+
+// foreign imports
+use serde_big_array::BigArray;
+use std::fs;
 
 /// # Functionality:
 /// This struct contains both the chunk coordinates and the actual chunk containing the cells. 

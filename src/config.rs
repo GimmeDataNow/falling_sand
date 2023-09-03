@@ -1,7 +1,11 @@
+//module rules;
+#![allow(dead_code)]
+
 pub const SCREEN_WIDTH: i32 = 640;
 pub const SCREEN_HEIGHT: i32 = 360;
 pub const SCREEN_WIDTH_USIZE: usize = SCREEN_WIDTH as usize;
 pub const SCREEN_HEIGHT_USIZE: usize = SCREEN_HEIGHT as usize;
+pub const SCREEN_ARRAY_LENGTH: usize = SCREEN_WIDTH_USIZE * SCREEN_HEIGHT_USIZE;
 pub const SCREEN_SCALE: f32 = 2.0;
 
 pub const CHUNK_SIZE_USIZE: usize = 64;

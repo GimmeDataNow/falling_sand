@@ -1,16 +1,23 @@
+//module rules
+// should disable these once in a while to check the quality of the code
+#![allow(dead_code)]
+#![allow(unused_mut)]
+#![allow(unused_must_use)]
+
+
+// my imports
 mod chunk_manager;
+use chunk_manager::chunks::cells::Cell;
 mod config;
 use crate::debug_gui::Framework;
 mod debug_gui;
-
-use chunk_manager::chunks::cells::Cell;
 
 #[macro_use]
 mod macros;
 
 // foreign imports
 use pixels::{Error, Pixels, SurfaceTexture};
-
+use fps_counter;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -20,8 +27,6 @@ use winit_input_helper::WinitInputHelper;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-
-use fps_counter;
 
 fn main() -> Result<(), Error> {
     let mut cam_pos = (0, 0);
@@ -126,7 +131,7 @@ fn main() -> Result<(), Error> {
             // Draw the current frame
             Event::RedrawRequested(_) => {
                 // Draw the world
-                simulation_space.draw_2(cam_pos, pixels.frame_mut());
+                simulation_space.draw(cam_pos, pixels.frame_mut());
 
                 // Prepare egui
                 framework.prepare(&window, &mut cam_pos, &mut fps_tracker);
@@ -152,35 +157,4 @@ fn main() -> Result<(), Error> {
         }
     });
     
-}
-
-impl chunk_manager::ChunkManager {
-    fn draw_2(&mut self, cam_pos: (i32, i32), frame: &mut [u8]) {
-
-        // Calculate the half width and half height of the area
-        let half_width = config::SCREEN_WIDTH / 2;
-        let half_height = config::SCREEN_WIDTH / 2;
-
-        // this holds all of the color data
-        let mut color_map: Vec<[u8;4]> = Vec::new();
-
-        // Loop through the cells within the area
-        for dy in -half_width..half_width {
-            for dx in -half_height..half_height {
-
-                let cell_x = cam_pos.0 + dx;
-                let cell_y = cam_pos.1 - dy;
-
-                let coords = (cell_x, cell_y);
-    
-                // convert the goddamn dy / dx back to a normal iterator
-                // Get the cell at the current coordinates
-                color_map.push(self.get_cell_at_global_coords_force_load(coords).unwrap_or(Cell::default()).color)
-            }
-        }
-        // copy the color map to a frame buffer
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-            pixel.copy_from_slice(&color_map[i])
-        }
-    }
 }
