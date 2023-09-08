@@ -80,7 +80,7 @@ pub struct CellTypeProperties {
 /// This is the look-up-array for other functions to rely on.
 /// # Structure:
 /// It's an static array of `CellTypeProperties` with fixed length.
-static CELL_PROPERTIES: [CellTypeProperties; 12] = [    
+pub static CELL_PROPERTIES: [CellTypeProperties; 12] = [    
     CellTypeProperties { name: "Air",       cell_type: CellType::Air,       state: StateOfAggregation::Replaceable,     density: 0.0,   temp_coefficient: 1.0,      flammable: false, base_temp: 298,   base_color: [0,   0,    0, 0] },
     CellTypeProperties { name: "Rock",      cell_type: CellType::Rock,      state: StateOfAggregation::ImmovableSolid,  density: 9.0,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [119, 136,  153, 255] },
     CellTypeProperties { name: "Water",     cell_type: CellType::Water,     state: StateOfAggregation::Liquid,          density: 1.0,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0, 0,  255, 255] },
@@ -105,6 +105,11 @@ impl CellTypeProperties {
     /// # Functionality:
     /// This is the highly imortant function that returns the `&CellTypeProperties` that other functions rely on.
     pub fn get_cell_properties<'a>(cell_type: CellType) -> &'a CellTypeProperties { &CELL_PROPERTIES[cell_type as usize] }
+
+    /// # Functionality:
+    /// This function that returns the `&CellTypeProperties` of the corresponding index. This effectively does the same as `get_cell_properties()`, but rust restricts the types that a function can accept.
+    pub fn get_cell_properties_by_index<'a>(index: usize) -> &'a CellTypeProperties { &CELL_PROPERTIES[index] }
+
 }
 
 /// # Functionality:

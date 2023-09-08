@@ -8,6 +8,7 @@
 // my imports
 mod chunk_manager;
 use chunk_manager::chunks::cells::Cell;
+use chunk_manager::chunks::cells::CellType;
 mod config;
 use crate::debug_gui::Framework;
 mod debug_gui;
@@ -34,6 +35,8 @@ fn main() -> Result<(), Error> {
     let mut cam_pos = (0, 0);
     let mut fps_tracker = fps_counter::FPSCounter::new();
     let mut step_by_frame = false;
+    let mut paint_brush_toggle = false;
+    let mut paint_material = CellType::Air;
     
 
     // builds the Widow
@@ -48,7 +51,7 @@ fn main() -> Result<(), Error> {
             .build(&event_loop)
             .unwrap()
     };
-    let mut monitor_index = 0;
+    
     let mut monitor = event_loop.available_monitors().next().expect("well damn");
 
     window.set_cursor_icon(winit::window::CursorIcon::Crosshair);
@@ -133,14 +136,14 @@ fn main() -> Result<(), Error> {
                 .unwrap_or_default();
 
                 // bad painting mode
-                if input.mouse_held(0) {
-                    simulation_space.set_cell_at_global_coords((mouse_cell.0 as i32 + cam_pos.0 - config::SCREEN_WIDTH/2, -mouse_cell.1 as i32 + cam_pos.1 + config::SCREEN_HEIGHT/2), Cell::build_cell(chunk_manager::chunks::cells::CellType::Acid));
+                if input.mouse_held(0) && paint_brush_toggle {
+                    simulation_space.set_cell_at_global_coords((mouse_cell.0 as i32 + cam_pos.0 - config::SCREEN_WIDTH/2, -mouse_cell.1 as i32 + cam_pos.1 + config::SCREEN_HEIGHT/2), Cell::build_cell(paint_material));
                 }
 
                 // fancy painting mode
-                if input.mouse_held(1) || input.mouse_released(1) {
+                if (input.mouse_held(1) || input.mouse_released(1)) && paint_brush_toggle {
                     for (x, y) in bresenham::Bresenham::new(mouse_prev_cell, mouse_cell) {
-                        simulation_space.set_cell_at_global_coords((x as i32 + cam_pos.0 - config::SCREEN_WIDTH/2, -y as i32 + cam_pos.1 + config::SCREEN_HEIGHT/2), Cell::build_cell(chunk_manager::chunks::cells::CellType::Acid));
+                        simulation_space.set_cell_at_global_coords((x as i32 + cam_pos.0 - config::SCREEN_WIDTH/2, -y as i32 + cam_pos.1 + config::SCREEN_HEIGHT/2), Cell::build_cell(paint_material));
                     }
                 }
             }
@@ -178,7 +181,7 @@ fn main() -> Result<(), Error> {
                 simulation_space.draw(cam_pos, pixels.frame_mut());
 
                 // Prepare egui
-                framework.prepare(&window, &mut cam_pos, &mut fps_tracker);
+                framework.prepare(&window, &mut cam_pos, &mut fps_tracker, &mut paint_brush_toggle, &mut paint_material);
 
                 // Render everything together
                 let render_result = pixels.render_with(|encoder, render_target, context| {

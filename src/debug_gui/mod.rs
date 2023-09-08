@@ -3,6 +3,7 @@ use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
+use crate::chunk_manager::chunks::cells::{CELL_PROPERTIES, CellTypeProperties, CellType};
 
 /// Manages all state required for rendering egui over `Pixels`.
 pub(crate) struct Framework {
@@ -76,12 +77,12 @@ impl Framework {
     }
 
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &Window, coords:&mut (i32, i32), fps: &mut fps_counter::FPSCounter) {
+    pub(crate) fn prepare(&mut self, window: &Window, coords:&mut (i32, i32), fps: &mut fps_counter::FPSCounter, paint_brush_toggle: &mut bool, paint_material: &mut CellType) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx, coords, fps);
+            self.gui.ui(egui_ctx, coords, fps, paint_brush_toggle, paint_material);
         });
 
         self.textures.append(output.textures_delta);
@@ -144,7 +145,12 @@ impl Gui {
     }
 
     /// Create the UI using egui.
-    fn ui(&mut self, ctx: &Context, coords: &mut (i32, i32), fps: &mut fps_counter::FPSCounter) {
+    fn ui(&mut self,
+         ctx: &Context, 
+         coords: &mut (i32, i32), 
+         fps: &mut fps_counter::FPSCounter,
+         paint_brush_toggle: &mut bool,
+         paint_material: &mut CellType) {
         //egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
         //    //egui::menu::bar(ui, |ui| {
         //    //    ui.menu_button("File", |ui| {
@@ -173,6 +179,24 @@ impl Gui {
                     ui.label(format!("{:#?}", fps.tick()));
 
                 });
+        });
+
+        egui::Window::new("World tools").open(&mut self.window_open).show(ctx, |ui| {
+            ui.horizontal(|ui|{
+                ui.label(RichText::new("Paintbrush:").strong());
+                ui.checkbox(paint_brush_toggle, "");
+                egui::ComboBox::from_label("")
+                .selected_text(format!("{paint_material:?}"))
+                .show_ui(ui, |ui| {
+                    ui.style_mut().wrap = Some(false);
+                    ui.set_min_width(60.0);
+                    // i could dump this to a const function / a function that evaluates at compile time
+                    for i in 0..CELL_PROPERTIES.len() {
+                        let properties = CellTypeProperties::get_cell_properties_by_index(i);
+                        &ui.selectable_value(paint_material, properties.cell_type, properties.name);
+                    }
             });
+            });
+        });
     }
 }
