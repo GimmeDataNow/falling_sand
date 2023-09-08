@@ -3,7 +3,7 @@
 
 // my imports
 pub mod cells;
-use crate::chunk_manager::custom_error as Err;
+use crate::custom_errors as Err;
 use cells::Cell;
 use cells::CellType;
 use crate::config::CHUNK_LENGTH_USIZE;
@@ -29,9 +29,9 @@ impl Default for Chunk {
     }
 }
 
-impl From<std::io::Error> for Err::CustomErrors {
+impl From<std::io::Error> for Err::CellError {
     fn from(_: std::io::Error) -> Self {
-        Err::CustomErrors::CouldNotComplete
+        Err::CellError::CouldNotComplete
     }
 }
 
@@ -53,29 +53,29 @@ impl Chunk {
 
     /// # Functionality:
     /// Writes the given `Chunk` to a file with the appropriate file `path`.
-    pub fn save_chunk(&self) -> Result<(), Err::CustomErrors> {
+    pub fn save_chunk(&self) -> Result<(), Err::CellError> {
 
         // get the save path
         let file_path = Chunk::get_save_path(self.chunk_coordinates);
 
         // to ron format
-        let chunk_ron: String = ron::ser::to_string_pretty(self, Default::default()).map_err(|_| Err::CustomErrors::CouldNotComplete)?;
+        let chunk_ron: String = ron::ser::to_string_pretty(self, Default::default()).map_err(|_| Err::CellError::CouldNotComplete)?;
 
         // dump to the file or error
-        fs::write(file_path, chunk_ron).map_err(|_| Err::CustomErrors::CouldNotComplete)?;
+        fs::write(file_path, chunk_ron).map_err(|_| Err::CellError::CouldNotComplete)?;
 
         Ok(())
     }
 
     /// # Functionality:
     /// Reads a `Chunk` form a file `path` and returns either a `Chunk` or a `CustomErrors`.
-    pub fn get_from_file(file_path: &str) -> Result<Chunk, Err::CustomErrors> {
+    pub fn get_from_file(file_path: &str) -> Result<Chunk, Err::CellError> {
 
         // from file to ron format or escape
-        let chunk_ron: String = fs::read_to_string(file_path).map_err(|_| Err::CustomErrors::CouldNotComplete)?;
+        let chunk_ron: String = fs::read_to_string(file_path).map_err(|_| Err::CellError::CouldNotComplete)?;
 
         // get the chunk from the string or escape
-        let chunk: Chunk = ron::de::from_str(&chunk_ron).map_err(|_| Err::CustomErrors::CouldNotComplete)?;
+        let chunk: Chunk = ron::de::from_str(&chunk_ron).map_err(|_| Err::CellError::CouldNotComplete)?;
 
         // return
         Ok(chunk)

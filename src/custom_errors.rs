@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum CustomErrors {
+pub enum CellError {
     None,
     OutOfBounds,
     UndefinedBehavior,

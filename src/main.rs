@@ -6,9 +6,9 @@
 
 
 // my imports
+mod custom_errors;
 mod chunk_manager;
-use chunk_manager::chunks::cells::Cell;
-use chunk_manager::chunks::cells::CellType;
+use chunk_manager::chunks::cells::{Cell, CellType};
 mod config;
 use crate::debug_gui::Framework;
 mod debug_gui;

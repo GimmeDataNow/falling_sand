@@ -3,8 +3,8 @@
 
 // my imports
 pub mod chunks;
-mod custom_error;
 mod renderer;
+use crate::custom_errors;
 use crate::config;
 use self::chunks::cells::{CellType, Cell, CellTypeProperties, StateOfAggregation};
 
@@ -65,36 +65,36 @@ impl ChunkManager {
     /// # Functionality:
     /// Saves the chunk.
     /// # TODO: NOT WOKING
-    pub fn simple_save(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
+    pub fn simple_save(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_errors::CellError> {
         // check if the chunk is loaded
         if self.map.contains_key(&chunk_coords) {
             
             // Save the chunk to disk before unloading if needed
-            self.map.get(&chunk_coords).ok_or(custom_error::CustomErrors::CouldNotComplete)?.save_chunk()?;
+            self.map.get(&chunk_coords).ok_or(custom_errors::CellError::CouldNotComplete)?.save_chunk()?;
             
             Ok(())
         } else {
             // error if the chunk is not loaded
-            Err(custom_error::CustomErrors::FailedToSave)
+            Err(custom_errors::CellError::FailedToSave)
         }
     }
 
     /// # Functionality:
     /// Check if the `Chunk` is loaded in the `chunk-map`. Then it will try to save the `Chunk` and then it removes it from the `chunk-map`.
-    pub fn unload_chunk_at_coords(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
+    pub fn unload_chunk_at_coords(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_errors::CellError> {
 
         // check if the chunk is loaded
         if self.map.contains_key(&chunk_coords) {
 
             // Save the chunk to disk before unloading if needed
-            self.map.get(&chunk_coords).ok_or(custom_error::CustomErrors::CouldNotComplete)?.save_chunk()?;
+            self.map.get(&chunk_coords).ok_or(custom_errors::CellError::CouldNotComplete)?.save_chunk()?;
 
             // Remove the chunk from the hashmap to unload it
             self.map.remove(&chunk_coords);
             Ok(())
         } else {
             // error if the chunk is not loaded
-            Err(custom_error::CustomErrors::FailedToUnload)
+            Err(custom_errors::CellError::FailedToUnload)
         }
     }
 
@@ -180,12 +180,16 @@ impl ChunkManager {
     /// # Functionality:
     /// Checks if a cell is solid.
     pub fn is_solid(&self, coords: (i32, i32)) -> Option<()> {
+        
+        // get the cell state
         let cell_state = self.get_cell_at_global_coords(coords)?.get_cell_properties().state;
+
+        // check if cell is not an `ImmovableSolid` or a `Granular` material
         (cell_state == StateOfAggregation::ImmovableSolid || cell_state == StateOfAggregation::Granular).then(|| ())
     }
 
     /// # Functionality:
-    /// Checks if the density of the cell at `coords_1` is greater `>` than `coords_2`.
+    /// Checks if the density of the cell at `coords_1` is greater `>` than `coords_2`. Retuns none if the cell properties could not be retreived
     fn compare_density(&self, coords_1: (i32, i32), coords_2: (i32, i32)) -> Option<()> {
         (self.get_cell_at_global_coords(coords_1)?.get_cell_properties().density > self.get_cell_at_global_coords(coords_2)?.get_cell_properties().density).then(|| ())
     }
@@ -208,45 +212,37 @@ impl ChunkManager {
     
     
 
-    fn get_neighboring_cells(chunk_manager: &ChunkManager, x: i32, y: i32) -> [Cell; 8] {
-        let mut neighbors: [Cell; 8] = Default::default(); // Initialize the array with default values
-    
-        let mut index = 0;
-        // Iterate over neighboring coordinates (relative to the cell at (x, y))
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                // Skip the cell itself (dx = 0, dy = 0)
-                if dx == 0 && dy == 0 {
-                    continue;
-                }
-    
-                let neighbor_x = x + dx;
-                let neighbor_y = y + dy;
-    
-                // Get the neighboring cell if it exists and add it to the array
-                if let Some(neighbor_cell) = chunk_manager.get_cell_at_global_coords((neighbor_x, neighbor_y)) {
-                    neighbors[index] = neighbor_cell;
-                }
-    
-                index += 1;
-            }
-        }
-    
-        neighbors
+    fn get_neighboring_cells(chunk_manager: &ChunkManager, coords: (i32, i32)) -> [Cell; 8] {
+
+        // the previous implementation was bad. need to redo
+        todo!()
     }
     
     // will have to be remade for gasses to work properly
     #[inline]
     fn vertical(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
+
+        // convert the bool into a usable variable
         let dy: i32 = if normal_gravity { -1 } else { 1 };
+
         if density_based {
+            // checks if the cell it is trying to swap to is not solid and checks if it has a greater density than the target cell
             if !self.is_solid(coords).is_some() && !self.is_solid((coords.0, coords.1 + dy)).is_some() && self.compare_density(coords, (coords.0, coords.1 + dy)).is_some() {
+
+                // swap
                 self.swap_cells_at_global_coords(coords, (coords.0, coords.1 + dy));
+
+                // return an `Ok`
                 return Some(());
             }
         }
+        // checks if the cell it is trying to swap to is not solid
         else if !self.is_solid((coords.0, coords.1 + dy)).is_some() {
+
+            // swap
             self.swap_cells_at_global_coords(coords, (coords.0, coords.1 + dy));
+
+            // return an `Ok`
             return Some(());
         }
         None
@@ -261,20 +257,16 @@ impl ChunkManager {
     
 
     pub fn iterate_area_around_coordinate(&mut self, x: i32, y: i32) {
-        // Calculate the half width and half height of the area
-        let half_width = config::SIMULATION_WIDTH_I32 / 2;
-        let half_height = config::SIMULATION_HEIGHT_I32 / 2;
-    
-        // Loop through the cells within the area
-        for dx in -half_width..=half_width {
-            for dy in -half_height..=half_height {
-                let cell_x = x + dx;
-                let cell_y = y + dy;
 
-                let coords = (cell_x, cell_y);
+        // Loop through the cells within the area
+        for dx in 0..=config::SIMULATION_HEIGHT_I32 {
+            for dy in 0..=config::SIMULATION_HEIGHT_I32/2 {
+
+                // convert dx and dy such that the iteration is centered around the provided coordinate
+                let coords = (x + dx - config::SIMULATION_WIDTH_I32 / 2, y + dy - config::SIMULATION_WIDTH_I32 / 2);
     
-                // Get the cell at the current coordinates
-                if let Some(cell) = self.get_cell_at_global_coords((cell_x, cell_y)) {
+                // Get the cell at the current coordinates without errors
+                if let Some(cell) = self.get_cell_at_global_coords(coords) {
                     // Retrieve the state of aggregation based on the cell's type
                     let state_of_aggregation = CellTypeProperties::get_cell_properties(cell.cell_type).state;
     
@@ -282,16 +274,14 @@ impl ChunkManager {
                     match state_of_aggregation {
                         StateOfAggregation::Granular => {
                             // Handle granular cells
-                            // Example: Perform granular behavior
+                            // Will need to place these into a proper function
                             self.vertical(coords, false, true);
                         }
                         StateOfAggregation::Liquid => {
                             // Handle liquid cells
-                            // Example: Perform liquid behavior
                         }
                         StateOfAggregation::Gas => {
                             // Handle gas cells
-                            // Example: Perform gas behavior
                         }
                         _ => ()
                     }
