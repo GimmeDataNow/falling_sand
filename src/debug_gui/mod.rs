@@ -77,12 +77,12 @@ impl Framework {
     }
 
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &Window, coords:&mut (i32, i32), fps: &mut fps_counter::FPSCounter, paint_brush_toggle: &mut bool, paint_material: &mut CellType) {
+    pub(crate) fn prepare(&mut self, window: &Window, coords:&mut (i32, i32), fps: &mut fps_counter::FPSCounter, paint_brush_toggle: &mut bool, paint_material: &mut CellType, toggle_simulation: &mut bool) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx, coords, fps, paint_brush_toggle, paint_material);
+            self.gui.ui(egui_ctx, coords, fps, paint_brush_toggle, paint_material, toggle_simulation);
         });
 
         self.textures.append(output.textures_delta);
@@ -113,7 +113,7 @@ impl Framework {
 
         // Render egui with WGPU
         {
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut rpass: wgpu::RenderPass<'_> = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("egui"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: render_target,
@@ -150,7 +150,8 @@ impl Gui {
          coords: &mut (i32, i32), 
          fps: &mut fps_counter::FPSCounter,
          paint_brush_toggle: &mut bool,
-         paint_material: &mut CellType) {
+         paint_material: &mut CellType,
+         toggle_simulation: &mut bool) {
         //egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
         //    //egui::menu::bar(ui, |ui| {
         //    //    ui.menu_button("File", |ui| {
@@ -174,28 +175,29 @@ impl Gui {
                     ui.label("y:");
                     ui.add(egui::DragValue::new(&mut coords.1));
                 });
-                ui.horizontal(|ui|{
+                ui.horizontal(|ui: &mut egui::Ui|{
                     ui.label(egui::RichText::new("FPS: ").strong());
                     ui.label(format!("{:#?}", fps.tick()));
 
                 });
         });
 
-        egui::Window::new("World tools").open(&mut self.window_open).show(ctx, |ui| {
+        egui::Window::new("World tools").open(&mut self.window_open).show(ctx, |ui: &mut egui::Ui| {
             ui.horizontal(|ui|{
                 ui.label(RichText::new("Paintbrush:").strong());
                 ui.checkbox(paint_brush_toggle, "");
                 egui::ComboBox::from_label("")
                 .selected_text(format!("{paint_material:?}"))
-                .show_ui(ui, |ui| {
+                .show_ui(ui, |ui: &mut egui::Ui| {
                     ui.style_mut().wrap = Some(false);
                     ui.set_min_width(60.0);
                     // i could dump this to a const function / a function that evaluates at compile time
                     for i in 0..CELL_PROPERTIES.len() {
-                        let properties = CellTypeProperties::get_cell_properties_by_index(i);
+                        let properties: &CellTypeProperties = CellTypeProperties::get_cell_properties_by_index(i);
                         &ui.selectable_value(paint_material, properties.cell_type, properties.name);
                     }
             });
+            ui.checkbox(toggle_simulation, "toggle simulation")
             });
         });
     }

@@ -32,11 +32,13 @@ extern crate serde_derive;
 use bresenham;
 
 fn main() -> Result<(), Error> {
+    // should probably move these into some kind of struct
     let mut cam_pos = (0, 0);
     let mut fps_tracker = fps_counter::FPSCounter::new();
     let mut step_by_frame = false;
     let mut paint_brush_toggle = false;
     let mut paint_material = CellType::Air;
+    let mut toggle_simulation = false;
     
 
     // builds the Widow
@@ -108,7 +110,7 @@ fn main() -> Result<(), Error> {
                 map_key!(VirtualKeyCode::D, VirtualKeyCode::Right,  cam_pos= (cam_pos.0 + 1, cam_pos.1));
                 map_key!(VirtualKeyCode::F11, window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(Some(monitor.clone())))));
                 map_key!(VirtualKeyCode::F12, window.set_fullscreen(None));
-                map_key!(VirtualKeyCode::Return, {simulation_space.set_cell_at_global_coords(cam_pos, Cell::build_cell(chunk_manager::chunks::cells::CellType::Acid));});
+                map_key!(VirtualKeyCode::Return, toggle_simulation = !toggle_simulation);
             }
 
             // mouse inputs
@@ -164,6 +166,9 @@ fn main() -> Result<(), Error> {
                 //simulation_space.update_cell_behaviour();
                 //simulation_space.update_cell_alchemy();
             }
+            if toggle_simulation {
+                simulation_space.iterate_area_around_coordinate(cam_pos.0, cam_pos.1);
+            }
 
             // update display
             window.request_redraw();
@@ -181,7 +186,7 @@ fn main() -> Result<(), Error> {
                 simulation_space.draw(cam_pos, pixels.frame_mut());
 
                 // Prepare egui
-                framework.prepare(&window, &mut cam_pos, &mut fps_tracker, &mut paint_brush_toggle, &mut paint_material);
+                framework.prepare(&window, &mut cam_pos, &mut fps_tracker, &mut paint_brush_toggle, &mut paint_material, &mut toggle_simulation);
 
                 // Render everything together
                 let render_result = pixels.render_with(|encoder, render_target, context| {

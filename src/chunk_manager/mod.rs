@@ -62,6 +62,9 @@ impl ChunkManager {
         self.map.get_mut(&chunk_coords).unwrap()
     }
 
+    /// # Functionality:
+    /// Saves the chunk.
+    /// # TODO: NOT WOKING
     pub fn simple_save(&mut self, chunk_coords: &(i32, i32)) -> Result<(), custom_error::CustomErrors> {
         // check if the chunk is loaded
         if self.map.contains_key(&chunk_coords) {
@@ -120,7 +123,7 @@ impl ChunkManager {
     }
 
     /// # Functionality:
-    /// Set a `Cell` at a given coordinate, even if the `Chunk` is not loaded
+    /// Set a `Cell` at a given coordinate, even if the `Chunk` is not loaded.
     pub fn get_cell_at_global_coords_force_load(&mut self, coords: (i32, i32)) -> Option<Cell> {
 
         // Step 1: Convert global coordinates to chunk coordinates
@@ -149,7 +152,7 @@ impl ChunkManager {
     }
 
     /// # Functionality:
-    /// Set a `Cell` at a given coordinate, given that the `Chunk` is loaded
+    /// Set a `Cell` at a given coordinate, given that the `Chunk` is loaded.
     pub fn set_cell_at_global_coords(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
 
         // Step 1: Convert global coordinates to chunk coordinates
@@ -174,68 +177,33 @@ impl ChunkManager {
         None
     }
 
+    /// # Functionality:
+    /// Checks if a cell is solid.
     pub fn is_solid(&self, coords: (i32, i32)) -> Option<()> {
-        (self.get_cell_at_global_coords(coords)?.get_cell_properties().state == StateOfAggregation::ImmovableSolid
-        || self.get_cell_at_global_coords(coords)?.get_cell_properties().state == StateOfAggregation::Granular).then(|| ())
+        let cell_state = self.get_cell_at_global_coords(coords)?.get_cell_properties().state;
+        (cell_state == StateOfAggregation::ImmovableSolid || cell_state == StateOfAggregation::Granular).then(|| ())
     }
 
+    /// # Functionality:
+    /// Checks if the density of the cell at `coords_1` is greater `>` than `coords_2`.
     fn compare_density(&self, coords_1: (i32, i32), coords_2: (i32, i32)) -> Option<()> {
         (self.get_cell_at_global_coords(coords_1)?.get_cell_properties().density > self.get_cell_at_global_coords(coords_2)?.get_cell_properties().density).then(|| ())
     }
 
     /// # Functionality:
     /// Swaps the cells
-    fn swap_cells_at_global_coords(&mut self, coords_1: (i32, i32), coords_2: (i32, i32)) {
-        // Step 1: Convert global coordinates to chunk coordinates
-        let chunk_x1 = coords_1.0 / config::CHUNK_SIZE_I32;
-        let chunk_y1 = coords_1.1 / config::CHUNK_SIZE_I32;
-        let chunk_x2 = coords_2.0 / config::CHUNK_SIZE_I32;
-        let chunk_y2 = coords_2.1 / config::CHUNK_SIZE_I32;
-    
-        // Step 2: Check if the cells are in different chunks
-        if chunk_x1 == chunk_x2 && chunk_y1 == chunk_y2 {
-            // Cells are in the same chunk
-            let chunk_coords = (chunk_x1, chunk_y1);
-    
-            // Step 3: Convert local chunk coordinates to cell coordinates
-            let local_x1 = coords_1.0.rem_euclid(config::CHUNK_SIZE_I32);
-            let local_y1 = coords_1.1.rem_euclid(config::CHUNK_SIZE_I32);
-            let local_x2 = coords_2.0.rem_euclid(config::CHUNK_SIZE_I32);
-            let local_y2 = coords_2.1.rem_euclid(config::CHUNK_SIZE_I32);
-    
-            // Step 4: Access and Swap the Cells within the same chunk
-            if let Some(chunk) = self.map.get_mut(&chunk_coords) {
-                let cell_index1 = (local_x1 + local_y1 * config::CHUNK_SIZE_I32) as usize;
-                let cell_index2 = (local_x2 + local_y2 * config::CHUNK_SIZE_I32) as usize;
-    
-                if cell_index1 < config::CHUNK_LENGTH_USIZE && cell_index2 < config::CHUNK_LENGTH_USIZE {
-                    let temp_cell = chunk.cells[cell_index1];
-                    chunk.cells[cell_index1] = chunk.cells[cell_index2];
-                    chunk.cells[cell_index2] = temp_cell;
-                }
-            }
-        } else {
-            // Cells are in different chunks
-            let chunk1_coords = (chunk_x1, chunk_y1);
-            let chunk2_coords = (chunk_x2, chunk_y2);
-    
-            // Step 5: Check if both chunks are present in the ChunkManager
-            if let (Some(mut chunk1), Some(mut chunk2)) = (self.map.get(&chunk1_coords).cloned(), self.map.get(&chunk2_coords).cloned()) {
-                // Step 6: Convert local chunk coordinates to cell coordinates
-                let local_x1 = coords_1.0.rem_euclid(config::CHUNK_SIZE_I32);
-                let local_y1 = coords_1.1.rem_euclid(config::CHUNK_SIZE_I32);
-                let local_x2 = coords_2.0.rem_euclid(config::CHUNK_SIZE_I32);
-                let local_y2 = coords_2.1.rem_euclid(config::CHUNK_SIZE_I32);
-    
-                // Step 7: Access and Swap the Cells between the two chunks
-                let cell_index1 = (local_x1 + local_y1 * config::CHUNK_SIZE_I32) as usize;
-                let cell_index2 = (local_x2 + local_y2 * config::CHUNK_SIZE_I32) as usize;
-    
-                if cell_index1 < config::CHUNK_LENGTH_USIZE && cell_index2 < config::CHUNK_LENGTH_USIZE {
-                    std::mem::swap(&mut chunk1.cells[cell_index1], &mut chunk2.cells[cell_index2]);
-                }
-            }
-        }
+    fn swap_cells_at_global_coords(&mut self, coords_1: (i32, i32), coords_2: (i32, i32)) -> Option<()> {
+
+        // store the cells
+        let cell_1_state = self.get_cell_at_global_coords_force_load(coords_1)?;
+        let cell_2_state = self.get_cell_at_global_coords_force_load(coords_2)?;
+
+        // swap the cells
+        self.set_cell_at_global_coords(coords_1, cell_2_state);
+        self.set_cell_at_global_coords(coords_2, cell_1_state);
+
+        // return if ok
+        Some(())
     }
     
     
@@ -277,7 +245,7 @@ impl ChunkManager {
                 return Some(());
             }
         }
-        else if !self.is_solid(coords).is_some() && !self.is_solid((coords.0, coords.1 + dy)).is_some() {
+        else if !self.is_solid((coords.0, coords.1 + dy)).is_some() {
             self.swap_cells_at_global_coords(coords, (coords.0, coords.1 + dy));
             return Some(());
         }
@@ -292,7 +260,7 @@ impl ChunkManager {
     }
     
 
-    fn iterate_area_around_coordinate(&mut self, x: i32, y: i32) {
+    pub fn iterate_area_around_coordinate(&mut self, x: i32, y: i32) {
         // Calculate the half width and half height of the area
         let half_width = config::SIMULATION_WIDTH_I32 / 2;
         let half_height = config::SIMULATION_HEIGHT_I32 / 2;
@@ -315,8 +283,7 @@ impl ChunkManager {
                         StateOfAggregation::Granular => {
                             // Handle granular cells
                             // Example: Perform granular behavior
-                            
-                            self.vertical(coords, false, false);
+                            self.vertical(coords, false, true);
                         }
                         StateOfAggregation::Liquid => {
                             // Handle liquid cells

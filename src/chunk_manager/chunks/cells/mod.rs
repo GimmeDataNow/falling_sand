@@ -11,6 +11,7 @@ use serde::{Serialize, Deserialize};
 /// The materials are: ```Air```, ```Rock```, etc.
 #[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum CellType {
+    #[default]
     Air,
     Rock,
     Water,
@@ -22,7 +23,7 @@ pub enum CellType {
     Oil,
     Lava,
     Acid,
-    #[default]
+    
     AntiVoid
 }
 
