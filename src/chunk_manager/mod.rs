@@ -333,7 +333,25 @@ impl ChunkManager {
 
     fn horizontal(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         
-        todo!()
+        let paths = self.check_sides(coords, coords, density_based);
+        let rand_bool = thread_rng().gen_bool(0.5);
+
+        if rand_bool && paths[0] {
+            if self.swap_cells_at_global_coords(coords, (coords.0 - 1, coords.1))
+            .or_else( || self.swap_cells_at_global_coords(coords, (coords.0 + 1, coords.1)) )
+            .is_some() {
+                return Some(());
+            }
+        }
+        else if !rand_bool && paths[1] {
+            if self.swap_cells_at_global_coords(coords, (coords.0 + 1, coords.1))
+            .or_else( || self.swap_cells_at_global_coords(coords, (coords.0 - 1, coords.1)) )
+            .is_some() {
+                return Some(());
+            }
+        }
+
+        None
     }
 
     fn granular(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
@@ -344,8 +362,9 @@ impl ChunkManager {
 
     fn liquid(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
-        .or_else(|| self.diagonal(coords, density_based, normal_gravity))?;
-        todo!()
+        .or_else(|| self.diagonal(coords, density_based, normal_gravity))
+        .or_else(|| self.horizontal(coords, density_based, normal_gravity))?;
+        Some(())
     }
 
     pub fn iterate_area_around_coordinate(&mut self, x: i32, y: i32) {
@@ -373,6 +392,7 @@ impl ChunkManager {
                             }
                             StateOfAggregation::Liquid => {
                                 // Handle liquid cells
+                                self.liquid(coords, true, true);
                             }
                             StateOfAggregation::Gas => {
                                 // Handle gas cells
