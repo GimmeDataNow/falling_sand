@@ -128,14 +128,15 @@ impl CellTypeProperties {
 pub struct Cell {
     pub cell_type: CellType,
     pub color: [u8; 4],
-    pub generation: u32,
     pub temp: u16,
+    pub generation: u16,
+    
 }
 
 impl Default for Cell {
     fn default() -> Self {
         let c: &CellTypeProperties = CellTypeProperties::get_cell_properties(CellType::default());
-        Cell { cell_type: c.cell_type, color: c.base_color, generation: 0, temp: 295 }
+        Cell { cell_type: c.cell_type, color: c.base_color, temp: 295 , generation: 0}
     }
 }
 

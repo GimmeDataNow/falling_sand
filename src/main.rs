@@ -13,6 +13,8 @@ mod config;
 use crate::debug_gui::Framework;
 mod debug_gui;
 
+mod entity_manager;
+
 #[macro_use]
 mod macros;
 
@@ -110,7 +112,7 @@ fn main() -> Result<(), Error> {
                 map_key!(VirtualKeyCode::D, VirtualKeyCode::Right,  cam_pos= (cam_pos.0 + 1, cam_pos.1));
                 map_key!(VirtualKeyCode::F11, window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(Some(monitor.clone())))));
                 map_key!(VirtualKeyCode::F12, window.set_fullscreen(None));
-                map_key!(VirtualKeyCode::Return, toggle_simulation = !toggle_simulation);
+                map_key!(VirtualKeyCode::F3, simulation_space.set_chunk(cam_pos, CellType::Lava));
             }
 
             // mouse inputs
@@ -136,11 +138,6 @@ fn main() -> Result<(), Error> {
                     )
                 })
                 .unwrap_or_default();
-
-                // bad painting mode
-                if input.mouse_held(0) && paint_brush_toggle {
-                    simulation_space.set_cell_at_global_coords((mouse_cell.0 as i32 + cam_pos.0 - config::SCREEN_WIDTH/2, -mouse_cell.1 as i32 + cam_pos.1 + config::SCREEN_HEIGHT/2), Cell::build_cell(paint_material));
-                }
 
                 // fancy painting mode
                 if (input.mouse_held(1) || input.mouse_released(1)) && paint_brush_toggle {
@@ -168,6 +165,9 @@ fn main() -> Result<(), Error> {
             }
             if toggle_simulation {
                 simulation_space.iterate_area_around_coordinate(cam_pos.0, cam_pos.1);
+
+                // allows for overflow
+                simulation_space.generation.wrapping_add(1);
             }
 
             // update display

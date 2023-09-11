@@ -5,5 +5,6 @@ pub enum CellError {
     UndefinedBehavior,
     CouldNotComplete,
     FailedToSave,
-    FailedToUnload
+    FailedToUnload,
+    TargtNotLoaded
 }
