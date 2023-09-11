@@ -332,7 +332,7 @@ impl ChunkManager {
     }
 
     fn horizontal(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
-        
+
         let paths = self.check_sides(coords, coords, density_based);
         let rand_bool = thread_rng().gen_bool(0.5);
 
@@ -361,6 +361,12 @@ impl ChunkManager {
     }
 
     fn liquid(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
+        self.vertical(coords, density_based, normal_gravity)
+        .or_else(|| self.diagonal(coords, density_based, normal_gravity))
+        .or_else(|| self.horizontal(coords, density_based, normal_gravity))?;
+        Some(())
+    }
+    fn gas(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
         .or_else(|| self.diagonal(coords, density_based, normal_gravity))
         .or_else(|| self.horizontal(coords, density_based, normal_gravity))?;
@@ -396,6 +402,7 @@ impl ChunkManager {
                             }
                             StateOfAggregation::Gas => {
                                 // Handle gas cells
+                                self.gas(coords, true, false);
                             }
                             _ => ()
                         }
