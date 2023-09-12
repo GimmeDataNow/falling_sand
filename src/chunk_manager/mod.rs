@@ -75,11 +75,13 @@ impl ChunkManager {
         self.map.get_mut(&chunk_coords).unwrap()
     }
 
+    /// # Functionality:
+    /// Replaces a chunks contents with a given celltype.
     pub fn set_chunk(&mut self, global_coords: (i32, i32), cell_type: CellType) -> Option<()> {
         let chunk_coords = ChunkManager::to_chunk_coords(global_coords);
         
         if let Some(chunk) = self.map.get_mut(&chunk_coords) {
-            chunk.cells = chunks::Chunk::new_with_fill(cell_type, chunk_coords).cells;
+            chunk.cells = [Cell::build_cell(cell_type); config::CHUNK_LENGTH_USIZE];
             return Some(());
         }
         None
@@ -125,24 +127,13 @@ impl ChunkManager {
     /// Retreives the `Cell` with the given coordinates and returns an `Option<Cell>`. Returns `None` if the cell is not loaded.
     pub fn get_cell_at_global_coords(&self, coords: (i32, i32)) -> Option<Cell> {
 
-        // Step 1: Convert global coordinates to chunk coordinates
         let chunk_coords: (i32, i32) = ChunkManager::to_chunk_coords(coords);
 
-        // Step 2: Check if the ChunkManager contains the chunk
-        if let Some(chunk) = self.map.get(&chunk_coords) {
+        let local_coords: (i32, i32) = ChunkManager::to_local(coords);
 
-            // Step 3: Convert local chunk coordinates to cell coordinates
-            let local_coords: (i32, i32) = ChunkManager::to_local(coords);
+        let index: usize = ChunkManager::to_index(local_coords);
 
-            // Step 4: Access the cell in the chunk
-            let cell_index = (local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize;
-
-            // return the cell
-            return Some(chunk.cells[cell_index]);
-        }
-
-        // Return None if the chunk is not found
-        None
+        Some(self.map.get(&chunk_coords)?.cells[index])
     }
 
     pub fn get_celltype_at_global_coords(&self, coords: (i32, i32)) -> Option<&str> {
@@ -178,20 +169,7 @@ impl ChunkManager {
             ChunkManager::get_or_load_chunk(self, chunk_coords);
         }
         // Step 2: Check if the ChunkManager contains the chunk
-        if let Some(chunk) = self.map.get(&chunk_coords) {
-
-            // Step 3: Convert local chunk coordinates to cell coordinates
-            let local_coords: (i32, i32) = ChunkManager::to_local(coords);
-
-            // Step 4: Access the cell in the chunk
-            let cell_index = (local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize;
-
-            // return the cell
-            return Some(chunk.cells[cell_index]);
-        }
-
-        // Return None if the chunk is not found
-        None
+        self.get_cell_at_global_coords(coords)
     }
 
     pub fn update_generation(&mut self, coords: (i32, i32)) {
@@ -239,6 +217,18 @@ impl ChunkManager {
     }
 
     /// # Functionality:
+    /// Set a `Cell` at a given coordinate, given that the `Chunk` is loaded.
+    /// # Performance
+    /// 1 Fps goin when using it in the swap cell function
+    pub fn set_cell_unchecked(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
+        let chunk_coords: (i32, i32) = ChunkManager::to_chunk_coords(coords);
+        let local_coords: (i32, i32) = ChunkManager::to_local(coords);
+        let cell_index: usize = ChunkManager::to_index(local_coords);
+        self.map.get_mut(&chunk_coords)?.cells[cell_index] = cell;
+        Some(())
+    }
+
+    /// # Functionality:
     /// Checks if a cell is solid.
     pub fn is_solid(&self, coords: (i32, i32)) -> Option<()> {
         
@@ -260,20 +250,40 @@ impl ChunkManager {
         let cell_2_state = self.get_cell_at_global_coords_force_load(coords_2)?;
 
         // swap the cells
-        self.set_cell_at_global_coords(coords_1, cell_2_state);
-        self.set_cell_at_global_coords(coords_2, cell_1_state);
+        self.set_cell_unchecked(coords_1, cell_2_state);
+        self.set_cell_unchecked(coords_2, cell_1_state);
 
         // return if ok
         Some(())
     }
     
-    
+    fn get_properties(&self, coords: (i32, i32)) -> Option<(CellType, StateOfAggregation, f32)> {
+        let properties = self.get_cell_at_global_coords(coords)?.get_cell_properties();
+        Some((properties.cell_type, properties.state, properties.density))
+    }
 
-    fn get_neighboring_cells(&self, _coords: (i32, i32)) -> [Cell; 8] {
+    fn get_neighboring_cells(&self, coords: (i32, i32)) -> [Option<(CellType, StateOfAggregation, f32)>; 9] {
 
-        // the previous implementation was bad. need to REDO
+        let mut collection_array: [Option<(CellType, StateOfAggregation, f32)>; 9] = [None; 9];
+        for y in 0..=2  {
+            for x in 0..=2 {
+                collection_array[x as usize + 3 * y as usize] = self.get_properties((coords.0 + y - 1, coords.1 + x - 1));
+            }
+        }
+        collection_array
+    }
+
+    fn compare_array(state_buffer: [Option<(CellType, StateOfAggregation, f32)>; 9], ref_index: usize, target_index: usize, density_based: bool) -> Option<()> {
+        if density_based {
+
+        }
+        else {
+            
+        }
         todo!()
     }
+
+    
     
     /// # Functionality:
     /// Checks if the density of the cell at `coords_1` is greater `>` than `coords_2`. Retuns none if the cell properties could not be retreived
@@ -289,6 +299,7 @@ impl ChunkManager {
 
         // convert the bool into a usable variable
         let dy: i32 = if normal_gravity { -1 } else { 1 };
+        let target_index: usize = if normal_gravity { 1 } else { 7 };
 
         if density_based {
             // checks if the cell it is trying to swap to is not solid and checks if it has a greater density than the target cell
@@ -377,6 +388,7 @@ impl ChunkManager {
         None
     }
 
+    #[inline]
     fn granular(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
         .or_else(|| self.diagonal(coords, density_based, normal_gravity))?;
@@ -392,7 +404,7 @@ impl ChunkManager {
     fn gas(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
         .or_else(|| self.diagonal(coords, density_based, normal_gravity))
-        .or_else(|| self.horizontal(coords, density_based))?;
+        .or_else(|| self.horizontal(coords, density_based));
         Some(())
     }
 
@@ -407,9 +419,7 @@ impl ChunkManager {
 
                 // Get the cell at the current coordinates without errors
                 if let Some(cell) = self.get_cell_at_global_coords(coords) {
-                    
-                    if !self.needs_updating(coords).unwrap_or(false) {
-                        
+
                         // Retrieve the state of aggregation based on the cell's type
                         let state_of_aggregation = CellTypeProperties::get_cell_properties(cell.cell_type).state;
                         
@@ -429,7 +439,6 @@ impl ChunkManager {
                             }
                             _ => ()
                         }
-                    }
                 }
             }
         }

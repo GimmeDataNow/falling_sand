@@ -41,3 +41,6 @@ V4 from 30.08.2023+:
 - change the iterate_area_around_coordinate such that it iterates from left to right bottom to top
 - consider rewriting the chunk_manager to a version that houses 2 seperate buffers, such that one buffer can be used as a reference from which the other buffer will be build and finally swap the buffers and repeat
 - fix event_loop.run() in the main.rs file and make it such that it uses match statements if possible
+
+V5 from 12.09.2023+:
+Main focus of this branch is the optimisation of the code to allow for greater performance
