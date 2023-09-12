@@ -36,6 +36,7 @@ V4 from 30.08.2023+:
 + added chunks
 + added primitive simulations for all materials
 + neeed to fix some strange graphical aritfacts that occur by setting cells diagonally towards the coordinates ([-50; +50], ~[+200; +215]) >>> issue lied with the conversion of global_coords to chunk_coords
+- implement a static tag in the cell struct that hopefully reduces lag
 - improve the water physics
 - change the iterate_area_around_coordinate such that it iterates from left to right bottom to top
 - consider rewriting the chunk_manager to a version that houses 2 seperate buffers, such that one buffer can be used as a reference from which the other buffer will be build and finally swap the buffers and repeat

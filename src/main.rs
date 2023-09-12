@@ -9,9 +9,11 @@
 mod custom_errors;
 mod chunk_manager;
 use chunk_manager::chunks::cells::{Cell, CellType};
+use chunk_manager::world_tools::paint_tools::BrushType;
 mod config;
 use crate::debug_gui::Framework;
 mod debug_gui;
+
 
 mod entity_manager;
 
@@ -31,14 +33,14 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-use bresenham;
-
 fn main() -> Result<(), Error> {
     // should probably move these into some kind of struct
     let mut cam_pos = (0, 0);
+    let mut mouse_pos = (0, 0);
     let mut fps_tracker = fps_counter::FPSCounter::new();
     let mut step_by_frame = false;
     let mut paint_brush_toggle = false;
+    let mut brush = BrushType::Square(5);
     let mut paint_material = CellType::Air;
     let mut toggle_simulation = false;
     
@@ -123,28 +125,23 @@ fn main() -> Result<(), Error> {
                     let (dx, dy) = input.mouse_diff();
                     let prev_x = mx - dx;
                     let prev_y = my - dy;
-
                     let (mx_i, my_i) = pixels
                         .window_pos_to_pixel((mx, my))
                         .unwrap_or_else(|pos| pixels.clamp_pixel_pos(pos));
-
                     let (px_i, py_i) = pixels
                         .window_pos_to_pixel((prev_x, prev_y))
                         .unwrap_or_else(|pos| pixels.clamp_pixel_pos(pos));
-
                     (
                         (mx_i as isize, my_i as isize),
                         (px_i as isize, py_i as isize),
                     )
                 })
                 .unwrap_or_default();
-
                 // fancy painting mode
                 if (input.mouse_held(1) || input.mouse_released(1)) && paint_brush_toggle {
-                    for (x, y) in bresenham::Bresenham::new(mouse_prev_cell, mouse_cell) {
-                        simulation_space.set_cell_at_global_coords((x as i32 + cam_pos.0 - config::SCREEN_WIDTH/2, -y as i32 + cam_pos.1 + config::SCREEN_HEIGHT/2), Cell::build_cell(paint_material));
-                    }
+                    simulation_space.draw_line(cam_pos, mouse_prev_cell, mouse_cell, brush, paint_material)
                 }
+                mouse_pos = (mouse_cell.0 as i32, mouse_cell.1 as i32)
             }
             
 
@@ -186,7 +183,7 @@ fn main() -> Result<(), Error> {
                 simulation_space.draw(cam_pos, pixels.frame_mut());
 
                 // Prepare egui
-                framework.prepare(&window, &mut cam_pos, &mut fps_tracker, &mut paint_brush_toggle, &mut paint_material, &mut toggle_simulation);
+                framework.prepare(&window, &mut cam_pos, &mouse_pos, &mut fps_tracker, &mut paint_brush_toggle, &mut paint_material, &mut toggle_simulation, &simulation_space);
 
                 // Render everything together
                 let render_result = pixels.render_with(|encoder, render_target, context| {

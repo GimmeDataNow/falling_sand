@@ -41,16 +41,6 @@ pub enum StateOfAggregation {
 }
 
 /// # Functionality:
-/// This enum dictates what shape the `paint_brush()` function should assume.
-/// # Options:
-/// The options of ```BrushType``` are: ```Square``` and ```Circle```.
-#[allow(dead_code)]
-pub enum BrushType {
-    Square,
-    Circle
-}
-
-/// # Functionality:
 /// This struct dictates the structure and information of the look-up-array `CELL_PROPERTIES`, which inturn dictates material behavior. `base_temp` is measured in `Kelvin`.
 /// # Structure:
 /// ```

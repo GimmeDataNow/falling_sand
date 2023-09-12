@@ -4,6 +4,7 @@ use pixels::{wgpu, PixelsContext};
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 use crate::chunk_manager::chunks::cells::{CELL_PROPERTIES, CellTypeProperties, CellType};
+use crate::chunk_manager::ChunkManager;
 
 /// Manages all state required for rendering egui over `Pixels`.
 pub(crate) struct Framework {
@@ -77,12 +78,12 @@ impl Framework {
     }
 
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &Window, coords:&mut (i32, i32), fps: &mut fps_counter::FPSCounter, paint_brush_toggle: &mut bool, paint_material: &mut CellType, toggle_simulation: &mut bool) {
+    pub(crate) fn prepare(&mut self, window: &Window, coords:&mut (i32, i32), mouse_pos: &(i32, i32), fps: &mut fps_counter::FPSCounter, paint_brush_toggle: &mut bool, paint_material: &mut CellType, toggle_simulation: &mut bool, simulation_space: &ChunkManager) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx, coords, fps, paint_brush_toggle, paint_material, toggle_simulation);
+            self.gui.ui(egui_ctx, coords, mouse_pos, fps, paint_brush_toggle, paint_material, toggle_simulation, simulation_space);
         });
 
         self.textures.append(output.textures_delta);
@@ -147,11 +148,13 @@ impl Gui {
     /// Create the UI using egui.
     fn ui(&mut self,
          ctx: &Context, 
-         coords: &mut (i32, i32), 
+         coords: &mut (i32, i32),
+         mouse_pos: &(i32, i32), 
          fps: &mut fps_counter::FPSCounter,
          paint_brush_toggle: &mut bool,
          paint_material: &mut CellType,
-         toggle_simulation: &mut bool) {
+         toggle_simulation: &mut bool,
+         simulation_space: &ChunkManager) {
         //egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
         //    //egui::menu::bar(ui, |ui| {
         //    //    ui.menu_button("File", |ui| {
@@ -162,6 +165,8 @@ impl Gui {
         //    //    })
         //    //});
         //});
+
+        ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::Crosshair);
 
         egui::Window::new("Debug")
             .open(&mut self.window_open)
@@ -178,6 +183,12 @@ impl Gui {
                 ui.horizontal(|ui: &mut egui::Ui|{
                     ui.label(egui::RichText::new("FPS: ").strong());
                     ui.label(format!("{:#?}", fps.tick()));
+
+                });
+                ui.horizontal(|ui: &mut egui::Ui|{
+                    ui.label(egui::RichText::new("Material: ").strong());
+                    // BUG
+                    ui.label(format!("{:?}", simulation_space.get_celltype_at_global_coords(*mouse_pos)));
 
                 });
         });

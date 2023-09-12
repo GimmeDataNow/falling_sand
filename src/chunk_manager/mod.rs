@@ -3,6 +3,7 @@
 
 // my imports
 pub mod chunks;
+pub mod world_tools;
 mod renderer;
 use crate::custom_errors;
 use crate::config;
@@ -138,6 +139,28 @@ impl ChunkManager {
 
             // return the cell
             return Some(chunk.cells[cell_index]);
+        }
+
+        // Return None if the chunk is not found
+        None
+    }
+
+    pub fn get_celltype_at_global_coords(&self, coords: (i32, i32)) -> Option<&str> {
+
+        // Step 1: Convert global coordinates to chunk coordinates
+        let chunk_coords: (i32, i32) = ChunkManager::to_chunk_coords(coords);
+
+        // Step 2: Check if the ChunkManager contains the chunk
+        if let Some(chunk) = self.map.get(&chunk_coords) {
+
+            // Step 3: Convert local chunk coordinates to cell coordinates
+            let local_coords: (i32, i32) = ChunkManager::to_local(coords);
+
+            // Step 4: Access the cell in the chunk
+            let cell_index = (local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize;
+
+            // return the cell
+            return Some(chunk.cells[cell_index].get_cell_properties().name);
         }
 
         // Return None if the chunk is not found
@@ -331,7 +354,7 @@ impl ChunkManager {
         None
     }
 
-    fn horizontal(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
+    fn horizontal(&mut self, coords: (i32, i32), density_based: bool) -> Option<()> {
 
         let paths = self.check_sides(coords, coords, density_based);
         let rand_bool = thread_rng().gen_bool(0.5);
@@ -363,13 +386,13 @@ impl ChunkManager {
     fn liquid(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
         .or_else(|| self.diagonal(coords, density_based, normal_gravity))
-        .or_else(|| self.horizontal(coords, density_based, normal_gravity))?;
+        .or_else(|| self.horizontal(coords, density_based))?;
         Some(())
     }
     fn gas(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
         .or_else(|| self.diagonal(coords, density_based, normal_gravity))
-        .or_else(|| self.horizontal(coords, density_based, normal_gravity))?;
+        .or_else(|| self.horizontal(coords, density_based))?;
         Some(())
     }
 
