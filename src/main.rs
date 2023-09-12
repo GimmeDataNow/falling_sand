@@ -40,7 +40,7 @@ fn main() -> Result<(), Error> {
     let mut fps_tracker = fps_counter::FPSCounter::new();
     let mut step_by_frame = false;
     let mut paint_brush_toggle = false;
-    let mut brush = BrushType::Square(5);
+    let mut brush = BrushType::Square(10);
     let mut paint_material = CellType::Air;
     let mut toggle_simulation = false;
     
@@ -180,6 +180,7 @@ fn main() -> Result<(), Error> {
             // Draw the current frame
             Event::RedrawRequested(_) => {
                 // Draw the world
+                
                 simulation_space.draw(cam_pos, pixels.frame_mut());
 
                 // Prepare egui
