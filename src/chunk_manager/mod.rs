@@ -295,15 +295,17 @@ impl ChunkManager {
         if density_based {
             if ChunkManager::is_not_solid(state_buffer, ref_index).is_some() && ChunkManager::is_not_solid(state_buffer, target_index).is_some() 
             && ChunkManager::compare_density(state_buffer, ref_index, target_index).is_some() {
-                self.swap_cells_at_global_coords(coords, target_cell);
+                self.swap_cells_at_global_coords(coords, target_cell)?;
+                return Some(());
             }
         }
         else {
             if ChunkManager::is_not_solid(state_buffer, ref_index).is_some() && ChunkManager::is_not_solid(state_buffer, target_index).is_some() {
-                self.swap_cells_at_global_coords(coords, target_cell);
+                self.swap_cells_at_global_coords(coords, target_cell)?;
+                return Some(());
             }
         }
-        todo!()
+        None
     }
     
     fn diagonal(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
