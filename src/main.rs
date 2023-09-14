@@ -40,7 +40,7 @@ fn main() -> Result<(), Error> {
     let mut fps_tracker = fps_counter::FPSCounter::new();
     let mut step_by_frame = false;
     let mut paint_brush_toggle = false;
-    let mut brush = BrushType::Square(10);
+    let mut brush = BrushType::Square(30);
     let mut paint_material = CellType::Air;
     let mut toggle_simulation = false;
     
