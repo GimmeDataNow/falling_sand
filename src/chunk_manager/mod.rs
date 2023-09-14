@@ -49,9 +49,14 @@ impl ChunkManager {
     /// Convert the coordinates to `chunk-coordinates` for further processing.
     /// //THIS IS THE BUG
     fn to_chunk_coords(global_coords: (i32, i32)) -> (i32, i32) {
+        global_coords.0.is_positive();
+        //(
+        //    if global_coords.0 >= 0 { global_coords.0 / config::CHUNK_SIZE_I32 + 1 } else { global_coords.0 / config::CHUNK_SIZE_I32 },
+        //    if global_coords.1 >= 0 { global_coords.1 / config::CHUNK_SIZE_I32 + 1 } else { global_coords.1 / config::CHUNK_SIZE_I32 }
+        //)
         (
-            if global_coords.0 >= 0 { global_coords.0 / config::CHUNK_SIZE_I32 + 1 } else { global_coords.0 / config::CHUNK_SIZE_I32 },
-            if global_coords.1 >= 0 { global_coords.1 / config::CHUNK_SIZE_I32 + 1 } else { global_coords.1 / config::CHUNK_SIZE_I32 }
+            if global_coords.0.is_negative() { global_coords.0 / config::CHUNK_SIZE_I32 } else { global_coords.0 / config::CHUNK_SIZE_I32 + 1 },
+            if global_coords.1.is_negative() { global_coords.1 / config::CHUNK_SIZE_I32 } else { global_coords.1 / config::CHUNK_SIZE_I32 + 1 }
         )
         //(global_coords.0 / config::CHUNK_SIZE_I32, global_coords.1 / config::CHUNK_SIZE_I32)
     }
@@ -228,16 +233,7 @@ impl ChunkManager {
         Some(())
     }
 
-    /// # Functionality:
-    /// Checks if a cell is solid.
-    pub fn is_solid(&self, coords: (i32, i32)) -> Option<()> {
-        
-        // get the cell state
-        let cell_state = self.get_cell_at_global_coords(coords)?.get_cell_properties().state;
 
-        // check if cell is not an `ImmovableSolid` or a `Granular` material
-        (cell_state == StateOfAggregation::ImmovableSolid || cell_state == StateOfAggregation::Granular).then(|| ())
-    }
 
 
 
@@ -262,6 +258,8 @@ impl ChunkManager {
         Some((properties.cell_type, properties.state, properties.density))
     }
 
+    /// # Functionality:
+    /// Swaps the cells
     fn get_neighboring_cells(&self, coords: (i32, i32)) -> [Option<(CellType, StateOfAggregation, f32)>; 9] {
 
         let mut collection_array: [Option<(CellType, StateOfAggregation, f32)>; 9] = [None; 9];
@@ -273,138 +271,64 @@ impl ChunkManager {
         collection_array
     }
 
-    fn compare_array(state_buffer: [Option<(CellType, StateOfAggregation, f32)>; 9], ref_index: usize, target_index: usize, density_based: bool) -> Option<()> {
-        if density_based {
-
-        }
-        else {
-            
-        }
-        todo!()
-    }
-
     
     
     /// # Functionality:
     /// Checks if the density of the cell at `coords_1` is greater `>` than `coords_2`. Retuns none if the cell properties could not be retreived
-    fn compare_density(&self, coords_1: (i32, i32), coords_2: (i32, i32)) -> Option<()> {
-        (self.get_cell_at_global_coords(coords_1)?.get_cell_properties().density > self.get_cell_at_global_coords(coords_2)?.get_cell_properties().density).then(|| ())
+    fn compare_density(state_buffer: [Option<(CellType, StateOfAggregation, f32)>; 9], ref_index: usize, target_index: usize) -> Option<()> {
+        (state_buffer[ref_index]?.2 > state_buffer[target_index]?.2).then(|| ())
+    }
+
+    fn is_not_solid(state_buffer: [Option<(CellType, StateOfAggregation, f32)>; 9], ref_index: usize) -> Option<()> {
+        (state_buffer[ref_index]?.1 != StateOfAggregation::ImmovableSolid && state_buffer[ref_index]?.1 != StateOfAggregation::Granular).then(|| ())
     }
     
     // will have to be remade for gasses to work properly || REDO
     /// # Functionality:
     /// Swaps the cells
     #[inline]
-    fn vertical(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
-
-        // convert the bool into a usable variable
-        let dy: i32 = if normal_gravity { -1 } else { 1 };
-        let target_index: usize = if normal_gravity { 1 } else { 7 };
+    fn vertical(&mut self,state_buffer: [Option<(CellType, StateOfAggregation, f32)>; 9], coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
+        let ref_index: usize = 4;
+        let target_index: usize = if normal_gravity { 7 } else { 1 };
+        let target_cell = if normal_gravity { (coords.0, coords.1 - 1) } else { (coords.0, coords.1 + 1) };
 
         if density_based {
-            // checks if the cell it is trying to swap to is not solid and checks if it has a greater density than the target cell
-            if !self.is_solid(coords).is_some() && !self.is_solid((coords.0, coords.1 + dy)).is_some() && self.compare_density(coords, (coords.0, coords.1 + dy)).is_some() {
-
-                // swap
-                self.swap_cells_at_global_coords(coords, (coords.0, coords.1 + dy));
-
-                // return an `Ok`
-                return Some(());
+            if ChunkManager::is_not_solid(state_buffer, ref_index).is_some() && ChunkManager::is_not_solid(state_buffer, target_index).is_some() 
+            && ChunkManager::compare_density(state_buffer, ref_index, target_index).is_some() {
+                self.swap_cells_at_global_coords(coords, target_cell);
             }
         }
-        // checks if the cell it is trying to swap to is not solid
-        else if !self.is_solid((coords.0, coords.1 + dy)).is_some() {
-
-            // swap
-            self.swap_cells_at_global_coords(coords, (coords.0, coords.1 + dy));
-
-            // return an `Ok`
-            return Some(());
-        }
-        None
-    }
-
-
-    fn check_sides(&self, ref_coords: (i32, i32), coords: (i32, i32), density_based: bool) -> [bool; 2] {
-
-        let left_coords = (coords.0 - 1, coords.1);
-        let right_coords = (coords.0 + 1, coords.1);
-
-        if density_based {
-            [self.is_solid(left_coords).is_none() && self.compare_density(ref_coords, left_coords).is_some(), self.is_solid(right_coords).is_none() && self.compare_density(ref_coords, right_coords).is_some()]
-        }
         else {
-            [self.is_solid(left_coords).is_none(), self.is_solid(right_coords).is_none()]
+            if ChunkManager::is_not_solid(state_buffer, ref_index).is_some() && ChunkManager::is_not_solid(state_buffer, target_index).is_some() {
+                self.swap_cells_at_global_coords(coords, target_cell);
+            }
         }
+        todo!()
     }
     
     fn diagonal(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
-        let offset = if normal_gravity { -1 } else { 1 };
-
-        let same_layer = self.check_sides(coords, coords, density_based);
-        let offset_layer = self.check_sides(coords, (coords.0, coords.1 + offset), density_based);
-
-        let paths = [same_layer[0] && offset_layer[0], same_layer[1] && offset_layer[1]];
-        let rand_bool = thread_rng().gen_bool(0.5);
-
-        if rand_bool && paths[0] {
-            if self.swap_cells_at_global_coords(coords, (coords.0 - 1, coords.1 + offset))
-            .or_else( || self.swap_cells_at_global_coords(coords, (coords.0 + 1, coords.1 - offset)) )
-            .is_some() {
-                return Some(());
-            }
-        }
-        else if !rand_bool && paths[1] {
-            if self.swap_cells_at_global_coords(coords, (coords.0 + 1, coords.1 + offset))
-            .or_else( || self.swap_cells_at_global_coords(coords, (coords.0 - 1, coords.1 + offset)) )
-            .is_some() {
-                return Some(());
-            }
-        }
-
-        None
+        todo!()
     }
 
     fn horizontal(&mut self, coords: (i32, i32), density_based: bool) -> Option<()> {
-
-        let paths = self.check_sides(coords, coords, density_based);
-        let rand_bool = thread_rng().gen_bool(0.5);
-
-        if rand_bool && paths[0] {
-            if self.swap_cells_at_global_coords(coords, (coords.0 - 1, coords.1))
-            .or_else( || self.swap_cells_at_global_coords(coords, (coords.0 + 1, coords.1)) )
-            .is_some() {
-                return Some(());
-            }
-        }
-        else if !rand_bool && paths[1] {
-            if self.swap_cells_at_global_coords(coords, (coords.0 + 1, coords.1))
-            .or_else( || self.swap_cells_at_global_coords(coords, (coords.0 - 1, coords.1)) )
-            .is_some() {
-                return Some(());
-            }
-        }
-
-        None
+        todo!()
     }
 
     #[inline]
     fn granular(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
-        self.vertical(coords, density_based, normal_gravity)
-        .or_else(|| self.diagonal(coords, density_based, normal_gravity))?;
+        let state_buffer = self.get_neighboring_cells(coords);
+        self.vertical(state_buffer, coords, density_based, normal_gravity)?;
         Some(())
     }
 
     fn liquid(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
-        self.vertical(coords, density_based, normal_gravity)
-        .or_else(|| self.diagonal(coords, density_based, normal_gravity))
-        .or_else(|| self.horizontal(coords, density_based))?;
+        let state_buffer = self.get_neighboring_cells(coords);
+        self.vertical(state_buffer, coords, density_based, normal_gravity)?;
         Some(())
     }
     fn gas(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
-        self.vertical(coords, density_based, normal_gravity)
-        .or_else(|| self.diagonal(coords, density_based, normal_gravity))
-        .or_else(|| self.horizontal(coords, density_based));
+        let state_buffer = self.get_neighboring_cells(coords);
+        self.vertical(state_buffer, coords, density_based, normal_gravity)?;
         Some(())
     }
 
