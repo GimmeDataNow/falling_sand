@@ -208,6 +208,49 @@ impl ChunkManager {
         Some(chunk.cells[(local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize].generation != self.generation)
     }
 
+    fn set_moved(&mut self, coords: (i32, i32)) -> Option<()> {
+        let chunk = self.map.get_mut(&ChunkManager::to_chunk_coords(coords))?;
+        let local_coords = ChunkManager::to_local(coords);
+        chunk.cells[(local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize].moved = true;
+        Some(())
+    }
+
+    fn set_moved_area(&mut self, coords: (i32, i32)) -> Option<()> {
+        for y in -1..=1 {
+            for x in -1..=1 {
+                self.set_moved((coords.0 + x, coords.1 + y));
+            }
+        }
+        Some(())
+    }
+    pub fn set_cell_moved_at_global_coords(&mut self, coords: (i32, i32)) -> Option<()> {
+
+        // Step 1: Convert global coordinates to chunk coordinates
+        let chunk_coords: (i32, i32) = ChunkManager::to_chunk_coords(coords);
+
+        // Step 2: Check if the ChunkManager contains the chunk
+        if let Some(chunk) = self.map.get_mut(&chunk_coords) {
+
+            // Step 3: Convert local chunk coordinates to cell coordinates
+            let local_coords: (i32, i32) = ChunkManager::to_local(coords);
+
+            // Step 4: Access the cell in the chunk
+            let cell_index = (local_coords.0 + local_coords.1 * config::CHUNK_SIZE_I32) as usize;
+
+            // replace cell
+            chunk.cells[cell_index].moved = false;
+
+            // mark as updated
+            self.update_generation(coords);
+
+            // return the cell
+            return Some(());
+        }
+
+        // Return None if the chunk is not found
+        None
+    }
+
     /// # Functionality:
     /// Set a `Cell` at a given coordinate, given that the `Chunk` is loaded.
     pub fn set_cell_at_global_coords(&mut self, coords: (i32, i32), cell: Cell) -> Option<()> {
@@ -262,6 +305,9 @@ impl ChunkManager {
         // swap the cells
         self.set_cell_at_global_coords(coords_1, cell_2_state);
         self.set_cell_at_global_coords(coords_2, cell_1_state);
+
+        self.set_moved_area(coords_1);
+        self.set_moved_area(coords_2);
 
         // return if ok
         Some(())
@@ -379,20 +425,23 @@ impl ChunkManager {
 
     fn granular(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
-        .or_else(|| self.diagonal(coords, density_based, normal_gravity))?;
+        .or_else(|| self.diagonal(coords, density_based, normal_gravity))
+        .or_else(|| self.set_cell_moved_at_global_coords(coords))?;
         Some(())
     }
 
     fn liquid(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
         .or_else(|| self.diagonal(coords, density_based, normal_gravity))
-        .or_else(|| self.horizontal(coords, density_based))?;
+        .or_else(|| self.horizontal(coords, density_based))
+        .or_else(|| self.set_cell_moved_at_global_coords(coords))?;
         Some(())
     }
     fn gas(&mut self, coords: (i32, i32), density_based: bool, normal_gravity: bool) -> Option<()> {
         self.vertical(coords, density_based, normal_gravity)
         .or_else(|| self.diagonal(coords, density_based, normal_gravity))
-        .or_else(|| self.horizontal(coords, density_based))?;
+        .or_else(|| self.horizontal(coords, density_based))
+        .or_else(|| self.set_cell_moved_at_global_coords(coords))?;
         Some(())
     }
 
@@ -408,7 +457,7 @@ impl ChunkManager {
                 // Get the cell at the current coordinates without errors
                 if let Some(cell) = self.get_cell_at_global_coords(coords) {
                     
-                    if !self.needs_updating(coords).unwrap_or(false) {
+                    if cell.moved {
                         
                         // Retrieve the state of aggregation based on the cell's type
                         let state_of_aggregation = CellTypeProperties::get_cell_properties(cell.cell_type).state;

@@ -120,13 +120,14 @@ pub struct Cell {
     pub color: [u8; 4],
     pub temp: u16,
     pub generation: u16,
+    pub moved: bool,
     
 }
 
 impl Default for Cell {
     fn default() -> Self {
         let c: &CellTypeProperties = CellTypeProperties::get_cell_properties(CellType::default());
-        Cell { cell_type: c.cell_type, color: c.base_color, temp: 295 , generation: 0}
+        Cell { cell_type: c.cell_type, color: c.base_color, temp: 295 , generation: 0, moved: true }
     }
 }
 
@@ -148,7 +149,8 @@ impl Cell {
             cell_type: ref_cell_properties.cell_type,
             generation: 0, 
             color: if ref_cell_properties.state != StateOfAggregation::Liquid && ref_cell_properties.state != StateOfAggregation::Gas { randomise_color(ref_cell_properties.base_color, 0.1)} else { ref_cell_properties.base_color }, 
-            temp: ref_cell_properties.base_temp,  
+            temp: ref_cell_properties.base_temp,
+            moved: true
         }
     }
 }
