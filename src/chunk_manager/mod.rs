@@ -346,6 +346,7 @@ impl ChunkManager {
                 // Get the cell at the current coordinates without errors
                 if let Some(cell) = self.get_cell_at_global_coords(coords) {
 
+                    if cell.has_moved() {
                         // Retrieve the state of aggregation based on the cell's type
                         let state_of_aggregation = CellTypeProperties::get_cell_properties(cell.cell_type).state;
                         
@@ -365,6 +366,7 @@ impl ChunkManager {
                             }
                             _ => ()
                         }
+                    }
                 }
             }
         }
