@@ -37,6 +37,7 @@ ron = "0.8"
 
 #fps tracker
 fps_counter = "2.0.0"
+cargo-show-asm = "0.2.21"
 
 [features]
 optimize = ["log/release_max_level_warn"]

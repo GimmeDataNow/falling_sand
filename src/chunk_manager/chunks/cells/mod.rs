@@ -23,7 +23,6 @@ pub enum CellType {
     Oil,
     Lava,
     Acid,
-    
     AntiVoid
 }
 
@@ -119,7 +118,9 @@ pub struct Cell {
     pub cell_type: CellType,
     pub color: [u8; 4],
     pub temp: u16,
+    #[serde(skip_serializing)]
     pub generation: u16,
+    #[serde(skip_serializing)]
     pub moved: bool,
     
 }
@@ -148,7 +149,7 @@ impl Cell {
         Cell { 
             cell_type: ref_cell_properties.cell_type,
             generation: 0, 
-            color: if ref_cell_properties.state != StateOfAggregation::Liquid && ref_cell_properties.state != StateOfAggregation::Gas { randomise_color(ref_cell_properties.base_color, 0.1)} else { ref_cell_properties.base_color }, 
+            color: if ref_cell_properties.state != StateOfAggregation::Liquid && ref_cell_properties.state != StateOfAggregation::Gas { randomise_color(ref_cell_properties.base_color, 0.9)} else { ref_cell_properties.base_color }, 
             temp: ref_cell_properties.base_temp,
             moved: true
         }
@@ -162,12 +163,6 @@ impl Cell {
 /// Will return the base color of the cell if the range is not within the area of [0.0 -  1.0].
 pub fn randomise_color(color: [u8; 4], range: f32) -> [u8; 4] {
     if range < 0.0 || range > 1.0 { return color; }
-    let brightness_adjust: f32 = rand::thread_rng().gen_range(0.0..range);
-    [
-        (color[0] as f32 * (1.0 - brightness_adjust)).trunc() as u8,
-        (color[1] as f32 * (1.0 - brightness_adjust)).trunc() as u8,
-        (color[2] as f32 * (1.0 - brightness_adjust)).trunc() as u8,
-        (color[3] as f32 * (1.0 - brightness_adjust)).trunc() as u8
-    ]
+    let brightness_adjust: f32 = rand::thread_rng().gen_range(range..1.0);
+    color.map(|x| (x as f32 * brightness_adjust).trunc() as u8)
 }
-

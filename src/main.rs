@@ -79,6 +79,7 @@ fn main() -> Result<(), Error> {
 
     // this is where the magic starts
     let mut simulation_space = chunk_manager::ChunkManager::new();
+    simulation_space.force_load_area(cam_pos);
 
     // build this macro to reduce some code repetition
     macro_rules! map_key {
@@ -115,6 +116,8 @@ fn main() -> Result<(), Error> {
                 map_key!(VirtualKeyCode::F11, window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(Some(monitor.clone())))));
                 map_key!(VirtualKeyCode::F12, window.set_fullscreen(None));
                 map_key!(VirtualKeyCode::F3, simulation_space.set_chunk(cam_pos, CellType::Lava));
+                map_key!(VirtualKeyCode::B, simulation_space.simple_save(&(0, 0)));
+                map_key!(VirtualKeyCode::N, simulation_space.load_chunk((0, 0)));
             }
 
             // mouse inputs

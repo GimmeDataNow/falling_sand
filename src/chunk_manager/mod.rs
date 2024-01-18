@@ -75,6 +75,10 @@ impl ChunkManager {
         self.map.get_mut(&chunk_coords).unwrap()
     }
 
+    pub  fn load_chunk(&mut self, chunk_coords: (i32, i32)) {
+        self.map.insert(chunk_coords, chunks::Chunk::load_chunk(chunk_coords));
+    }
+
     pub fn set_chunk(&mut self, global_coords: (i32, i32), cell_type: CellType) -> Option<()> {
         let chunk_coords = ChunkManager::to_chunk_coords(global_coords);
         

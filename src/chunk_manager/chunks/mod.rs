@@ -47,8 +47,8 @@ impl Chunk {
 
     /// # Functionality:
     /// gets the save `path` of the `Chunk` with the given coordinates. This uses the `.ron` fileformat.
-    pub fn get_save_path(coords: (i32, i32)) -> String {
-        coords.0.to_string() + "|" + &coords.1.to_string() + ".ron"
+    pub fn get_save_path(coords: &(i32, i32)) -> String {
+        "chunks/".to_owned() + &coords.0.to_string() + "_" + &coords.1.to_string() + ".ron"
     }
 
     /// # Functionality:
@@ -56,7 +56,7 @@ impl Chunk {
     pub fn save_chunk(&self) -> Result<(), Err::CellError> {
 
         // get the save path
-        let file_path = Chunk::get_save_path(self.chunk_coordinates);
+        let file_path: String = Chunk::get_save_path(&self.chunk_coordinates);
 
         // to ron format
         let chunk_ron: String = ron::ser::to_string_pretty(self, Default::default()).map_err(|_| Err::CellError::CouldNotComplete)?;
@@ -84,7 +84,9 @@ impl Chunk {
     /// # Functionality:
     /// Load a `Chunk` from a file or returns a default `Chunk`.
     pub fn load_chunk(coords: (i32, i32)) -> Chunk {
-        let file_path: &String = &Chunk::get_save_path(coords);
+        // get the save path
+        let file_path: &String = &Chunk::get_save_path(&coords);
+
         Chunk::get_from_file(file_path).unwrap_or(Chunk::default())
     }
 }
