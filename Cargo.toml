@@ -6,34 +6,21 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-backtrace = "0.3"
 
+# graphics
+vulkano = "0.34.1"
+
+#used for random numbers
 rand = "0.8.5"
 
-env_logger = "0.10"
-log = "0.4"
-pixels = "0.11.0"
-winit = "0.27.0"
-winit_input_helper = "0.13"
-debug_print = "1.0.0"
+#math
+libmath = "0.2.1"
 
-[features]
-# optimize = ["log/release_max_level_warn"]
-# default = ["optimize"]
+# used for the chunk manager
+fnv = "1.0.7"
 
-# For optimization (at the cost of build time)
-[profile.dev]
-opt-level = 3
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.release]
-opt-level = "z"
-lto = "thin"
-strip = true
-codegen-units = 1
-panic = "abort"
-
-[profile.release.package."*"]
-opt-level = "z"
+# serialise/deserialise
+serde = { version = "1.0.195", features = ["derive"] }
+serde_derive = "1.0.195"
+serde-big-array = "0.5.1"
+ron ="0.8.1"
