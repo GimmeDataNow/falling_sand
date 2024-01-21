@@ -3,8 +3,10 @@
 
 // my imports
 use super::cells::{CellType, Cell};
+use super::coordinates::*;
 use crate::custom_error::CellError;
 use crate::config::CHUNK_LENGTH_USIZE;
+
 
 // foreign imports
 use serde::{Serialize, Deserialize};
@@ -17,14 +19,14 @@ use std::fs;
 /// This has to use `serde_big_array` crate to derive the serialization and deserialization functions since they are not serializable by default (due to their size).
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chunk {
-    pub chunk_coordinates: (i32, i32),
+    pub chunk_coordinates: ChunkCoords,
     #[serde(with = "BigArray")]
     pub cells: [Cell; CHUNK_LENGTH_USIZE],
 }
 
 impl Default for Chunk {
     fn default() -> Self {
-        Chunk { cells: [Cell::default(); CHUNK_LENGTH_USIZE], chunk_coordinates: (0,0) }
+        Chunk { cells: [Cell::default(); CHUNK_LENGTH_USIZE], chunk_coordinates: ChunkCoords{ x: 0, y:0 } }
     }
 }
 
@@ -32,16 +34,16 @@ impl Default for Chunk {
 impl Chunk {
 
     /// # Functionality:
-    /// returns a filled `Chunk` with the given `CellType` and `(x,y)` chunk-coordinates.
-    pub fn new_with_fill(cell_type: CellType, chunk_pos: (i32, i32)) -> Chunk {
+    /// Returns a filled `Chunk` with the given `CellType` and `ChunkCoords`.
+    pub fn new_with_fill(cell_type: CellType, chunk_coords: ChunkCoords) -> Chunk {
         let cell: Cell = Cell::build_cell(cell_type);
-        Chunk { chunk_coordinates: chunk_pos, cells: [cell; CHUNK_LENGTH_USIZE],}
+        Chunk { chunk_coordinates: chunk_coords, cells: [cell; CHUNK_LENGTH_USIZE],}
     }
 
     /// # Functionality:
-    /// gets the save `path` of the `Chunk` with the given coordinates. This uses the `.ron` fileformat.
-    pub fn get_save_path(coords: &(i32, i32)) -> String {
-        "chunks/".to_owned() + &coords.0.to_string() + "_" + &coords.1.to_string() + ".ron"
+    /// Gets the save `path` of the `Chunk` with the given coordinates. This uses the `.ron` fileformat.
+    pub fn get_save_path(coords: &ChunkCoords) -> String {
+        format!("chunks/{}_{}.ron",&coords.x, &coords.y )
     }
 
     /// # Functionality:
@@ -76,9 +78,9 @@ impl Chunk {
 
     /// # Functionality:
     /// Load a `Chunk` from a file or returns a default `Chunk`.
-    pub fn load_chunk(coords: (i32, i32)) -> Option<Chunk> {
+    pub fn load_chunk(coords: &ChunkCoords) -> Option<Chunk> {
         // get the save path
-        let file_path: &String = &Chunk::get_save_path(&coords);
+        let file_path: &String = &Chunk::get_save_path(coords);
 
         Chunk::get_from_file(file_path).ok()
     }

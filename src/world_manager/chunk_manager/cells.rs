@@ -26,6 +26,12 @@ pub enum CellType {
     AntiVoid
 }
 
+impl From<CellType> for StateOfAggregation {
+    fn from(value: CellType) -> Self {
+        CellTypeProperties::get_cell_properties(value).state
+    }
+}
+
 /// # Functionality:
 /// This enum dictates how the material is processed in the function that is responsible for updating the world.
 /// # Options:
@@ -102,6 +108,30 @@ impl CellTypeProperties {
 
 }
 
+impl From<Cell> for CellTypeProperties {
+    fn from(value: Cell) -> Self {
+        *CellTypeProperties::get_cell_properties(value.cell_type)
+    }
+}
+
+impl From<Cell> for &CellTypeProperties {
+    fn from(value: Cell) -> Self {
+        CellTypeProperties::get_cell_properties(value.cell_type)
+    }
+}
+
+impl From<CellType> for CellTypeProperties {
+    fn from(value: CellType) -> Self {
+        *CellTypeProperties::get_cell_properties(value)
+    }
+}
+
+impl From<CellType> for &CellTypeProperties {
+    fn from(value: CellType) -> Self {
+        CellTypeProperties::get_cell_properties(value)
+    }
+}
+
 /// # Functionality:
 /// This general cell struct that stores unique cell specific data.
 /// # Structure:
@@ -162,7 +192,7 @@ impl Cell {
 /// # Behavior:
 /// Will return the base color of the cell if the range is not within the area of [0.0 -  1.0].
 fn randomise_color(color: [u8; 4], range: f32) -> [u8; 4] {
-    if range < 0.0 || range > 1.0 { return color; }
+    if !(0.0..=1.0).contains(&range) { return color; }
     let brightness_adjust: f32 = rand::thread_rng().gen_range(range..1.0);
     color.map(|x| (x as f32 * brightness_adjust).trunc() as u8)
 }
