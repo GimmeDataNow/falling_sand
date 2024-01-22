@@ -1,4 +1,7 @@
-mod using_pixels_lib;
+//module rules;
+#![allow(dead_code)]
+
+pub mod using_pixels_lib;
 
 use std::sync::Arc;
 

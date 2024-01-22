@@ -20,7 +20,7 @@ impl Default for Player {
 }
 
 impl Player {
-    fn new(position: (i32, i32)) -> Self {
+    pub fn new(position: (i32, i32)) -> Self {
         Player { 
             position, 
             camera_positon: position, 

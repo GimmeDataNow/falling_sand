@@ -12,7 +12,7 @@ pub struct Entity {
 }
 
 impl Entity {
-    fn new(entity_type: EntityType) -> Self {
+    pub fn new(entity_type: EntityType) -> Self {
         Entity { 
             entity_type,
             additional_tags: None

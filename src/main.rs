@@ -1,13 +1,9 @@
-use std::mem;
-
-
-use crate::rendering_engine::start_vulkano;
+mod game_loop;
 
 mod world_manager;
-use crate::world_manager::chunk_manager::chunks::Chunk;
 mod custom_error;
 mod config;
-mod rendering_engine;
+pub mod window_utils;
 
 // temporary renderer
 // foreign imports
