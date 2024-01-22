@@ -1,3 +1,5 @@
+mod using_pixels_lib;
+
 use std::sync::Arc;
 
 use vulkano::VulkanLibrary;

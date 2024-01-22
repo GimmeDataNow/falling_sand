@@ -8,12 +8,14 @@ pub mod coordinates;
 use coordinates::*;
 
 use cells::StateOfAggregation;
+
 use crate::world_manager::chunk_manager::cells::CellTypeProperties;
 use crate::world_manager::chunk_manager::cells::Cell;
 use crate::world_manager::chunk_manager::chunks::Chunk;
 use crate::custom_error::ChunkError;
 use crate::config::DEFAULT_PLAYER_SPAWN_COORDINATES;
 
+use rand::Rng;
 /// # Functionality:
 /// This contain the `HashMap` containing the chunks with the `chunk-coordinates` as the key.
 /// # Notice:
@@ -168,7 +170,7 @@ impl ChunkChache {
 
         // match the tuple index
         match preffered_chunk {
-            
+
             true => {
 
                 // save the current Chunk into the hashmap
@@ -250,8 +252,8 @@ impl ChunkChache {
 
     /// # Functionality:
     /// sets the buffer and sets the Cell inside the ChunkManager
-    /// # Warning: 
-    /// It is the responsibility of the caller to ensure that the correct Chunk is loaded
+    /// 
+    /// loads the chunks if necessary
     fn swap_cells(&mut self, world_map: &mut ChunkManager, coords_1: &GlobalCoords, coords_2: &GlobalCoords) -> Option<()> {
 
         // get the chunk coordinates
@@ -292,24 +294,60 @@ impl ChunkChache {
         Some(())
     }
 
-    fn simulate_gravity(&mut self, _world_map: &mut ChunkManager, coords: &GlobalCoords, cell1_properties: CellTypeProperties) -> Option<()> {
+    /// # Functionality:
+    /// tries to simulate gravity for the given Cell. Returns `None` if it fails and `Some if it succeeds`
+    /// 
+    /// loads the chunks if necessary
+    fn simulate_gravity(&mut self, world_map: &mut ChunkManager, coords_1: &GlobalCoords, cell1_properties: CellTypeProperties) -> Option<()> {
 
-        let cell2 =  self.get_cell(&(*coords + (0, 1)))?;
+        // get the coordiantes
+        let coords_2: &GlobalCoords = &(*coords_1 + (0, 1));
 
-        let cell2_properties = Into::<CellTypeProperties>::into(cell2.0);
+        let cell2 =  self.get_cell(coords_2)?;
+
+        let cell2_properties: CellTypeProperties = Into::<CellTypeProperties>::into(cell2.0);
 
         match (cell1_properties.state, cell2_properties.state) {
 
             // eliminate the ImmovableSolids immediately
             (StateOfAggregation::ImmovableSolid, _) => None,
             (_, StateOfAggregation::ImmovableSolid) => None,
-            (StateOfAggregation::Gas, _) => None,
-            (a, b) => {
-                // continue here
+
+            // if the target is of a granular type then skip it
+            (_, StateOfAggregation::Granular) => None,
+
+            // no more checks are needed because the first match (the one above) prevents this
+            (StateOfAggregation::Granular, _) => {
+
+                // swap
+                self.swap_cells(world_map, coords_1, coords_2)?;
+
                 Some(())
             },
+
+            // liquids
+            (StateOfAggregation::Liquid, _) => {
+
+                // density check
+                if cell1_properties.density > cell2_properties.density {  self.swap_cells(world_map, coords_1, coords_2)? };
+
+                Some(())
+            },
+
+            // discard all else
             (_, _) => None,
-        };
+        }
+    }
+
+    /// # Functionality:
+    /// tries to simulate gravity for the given Cell. Returns `None` if it fails and `Some if it succeeds`
+    /// 
+    /// loads the chunks if necessary
+    fn simulate_diagonal(&mut self, _world_map: &mut ChunkManager, coords_1: &GlobalCoords, _cell1_properties: CellTypeProperties) -> Option<()> {
+        let rand_bool = rand::thread_rng().gen_bool(0.5);
+        let coords_2: &GlobalCoords = &(if rand_bool { *coords_1 + (0, 1) } else { *coords_1 + (0, -1) });
+
+        let _cell2 =  self.get_cell(coords_2)?;
         todo!()
     }
 

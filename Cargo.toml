@@ -24,3 +24,13 @@ serde = { version = "1.0.195", features = ["derive"] }
 serde_derive = "1.0.195"
 serde-big-array = "0.5.1"
 ron ="0.8.1"
+
+# temporary renderer
+pixels = "0.13.0"
+winit = "0.29.10"
+winit_input_helper = "0.15.3"
+egui ="0.25.0"
+egui-winit ={ version = "0.25.0", default-features = false, features = ["links"]}
+egui-wgpu = "0.25.0"
+
+fps_counter = "3.0.0"
