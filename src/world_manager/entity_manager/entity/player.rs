@@ -1,30 +1,31 @@
 //module rules;
 #![allow(dead_code)]
 
-use crate::config::DEFAULT_PLAYER_SPAWN_COORDINATES;
+use crate::config::DEFAULT_PLAYER_SPAWN_COORDINATES_F32;
+use crate::world_manager::coordinates::GlobalFloatingCoordinates;
 
 pub struct Player {
-    pub position: (i32, i32),
-    pub camera_positon: (i32, i32),
-    pub velocity: (i32, i32),
+    pub position:GlobalFloatingCoordinates,
+    pub camera_positon: GlobalFloatingCoordinates,
+    pub velocity: GlobalFloatingCoordinates,
 }
 
 impl Default for Player {
     fn default() -> Self {
         Player { 
-            position: DEFAULT_PLAYER_SPAWN_COORDINATES, 
-            camera_positon: DEFAULT_PLAYER_SPAWN_COORDINATES, 
-            velocity: (0, 0),
+            position: Into::into(DEFAULT_PLAYER_SPAWN_COORDINATES_F32), 
+            camera_positon: Into::into(DEFAULT_PLAYER_SPAWN_COORDINATES_F32), 
+            velocity: Into::into((0.0, 0.0)),
         }
     }
 }
 
 impl Player {
-    pub fn new(position: (i32, i32)) -> Self {
+    pub fn new(position: GlobalFloatingCoordinates) -> Self {
         Player { 
-            position, 
+            position: position, 
             camera_positon: position, 
-            velocity: (0, 0),
+            velocity: Into::into((0.0, 0.0)),
         }
     }
 }

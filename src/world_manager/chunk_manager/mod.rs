@@ -4,18 +4,17 @@
 // my imports
 pub mod cells;
 pub mod chunks;
-pub mod coordinates;
-use coordinates::*;
 
-use cells::StateOfAggregation;
-
-use crate::world_manager::chunk_manager::cells::CellTypeProperties;
-use crate::world_manager::chunk_manager::cells::Cell;
-use crate::world_manager::chunk_manager::chunks::Chunk;
+use super::coordinates::*;
+use cells::{StateOfAggregation, CellTypeProperties, Cell};
+use super::chunk_manager::chunks::Chunk;
 use crate::custom_error::ChunkError;
 use crate::config::DEFAULT_PLAYER_SPAWN_COORDINATES;
 
+
 use rand::Rng;
+
+
 /// # Functionality:
 /// This contain the `HashMap` containing the chunks with the `chunk-coordinates` as the key.
 /// # Notice:
@@ -117,19 +116,19 @@ impl ChunkManager {
 /// This should probably implement `Singletons` to ensure that there is only one instance of the `ChunkManager`.
 /// I should also eventually use a tuple: (Option<Chunk>, Option<Chunk>). This should improve the swap_cells() function a lot.
 /// # TODO: USE TUPLE
-pub struct ChunkChache {
+pub struct ChunkCache {
     pub chunk_coords: ChunkCoords,
     pub chunk: Option<Chunk>,
     pub chunk_coords_tuple: (ChunkCoords, ChunkCoords),
     pub chunk_tuple: (Option<Chunk>, Option<Chunk>)
 }
 
-impl ChunkChache {
+impl ChunkCache {
 
     /// # Functionality:
     /// creates the buffer
     pub fn new() -> Self {
-        ChunkChache { 
+        ChunkCache { 
             // used DEFAULT_PLAYER_SPAWN_COORDINATES
             // center chunk may not spawn correctly 
             // # TODO: FIX THIS
@@ -152,7 +151,7 @@ impl ChunkChache {
     /// loads the chunk into the buffer 
     /// 
     /// the bool represents the tuple index, that means that the return type indicates the position of the Chunk that was loaded into the tuple
-    fn load_chunk(&mut self, world_map: &mut ChunkManager, chunk_coords: &ChunkCoords, preffered_chunk: bool) -> Option<bool> {
+    pub fn load_chunk(&mut self, world_map: &mut ChunkManager, chunk_coords: &ChunkCoords, preffered_chunk: bool) -> Option<bool> {
 
         // retun early if the coordinates are already loaded
         // check if the target is loaded into the first tuple slot

@@ -3,7 +3,7 @@
 
 // my imports
 use super::cells::{CellType, Cell};
-use super::coordinates::*;
+use crate::world_manager::coordinates::*;
 use crate::custom_error::CellError;
 use crate::config::CHUNK_LENGTH_USIZE;
 

@@ -4,12 +4,10 @@
 use crate::config;
 // temporary renderer
 // foreign imports
-use pixels::{Error, Pixels, SurfaceTexture};
-use fps_counter;
+use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
-use winit::event::{Event};
-use winit::keyboard::{KeyCode, ModifiersState};
-use winit::event_loop::{ControlFlow, EventLoop};
+use winit::keyboard::ModifiersState;
+use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
@@ -21,14 +19,17 @@ pub struct WindowInfo {
     pub modifiers: ModifiersState,
 }
 
-fn init_window() -> WindowInfo {
 
+
+pub fn init_window() -> WindowInfo {
+
+    // create a new default event loop
     let event_loop: Result<EventLoop<()>, winit::error::EventLoopError> = EventLoop::new();
 
-
+    // needed for input handeling later on
     let input: WinitInputHelper = WinitInputHelper::new();
 
-
+    // window creation
     let window: winit::window::Window = {
         let size = LogicalSize::new(config::SCREEN_WIDTH as f32 * config::SCREEN_SCALE, config::SCREEN_HEIGHT as f32 * config::SCREEN_SCALE);
         WindowBuilder::new()
@@ -39,6 +40,7 @@ fn init_window() -> WindowInfo {
             .unwrap()
     };
     
+    // this is where the pixels-lib is first utilised
     let pixels: Pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
@@ -56,4 +58,3 @@ fn init_window() -> WindowInfo {
         modifiers,
     }
 }
-
