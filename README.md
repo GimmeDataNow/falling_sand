@@ -18,12 +18,12 @@ TLDR:
 - errors mostly handled at compile time
 - cross plattform
 
-## Things i learned in this project
+## Things I learned in this project
 I pretty much learned most of what I know about rust when starting this project through trail and error (and the compiler) and by watching very short youtube videos explaining some topics briefly. I relied on the Intellisense of the rust-analyser extension to discover functions and methods that I now use on a regular basis.
 
 I also learned to write better documentation using the '///# text' annotation above a function definition (Not all documentation is complete yet!). In addition I also learned how to use git. I previously never used it, but it became a necessity to manage several code branches at once without loosing any files.
 
-## Things i aim to learn in this project
+## Things I aim to learn in this project
 
 - how to utilise the gpu using vulcano
 - how to write shaders
