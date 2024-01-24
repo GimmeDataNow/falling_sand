@@ -10,6 +10,24 @@ pub struct GlobalCoords {
     pub y: i32
 }
 
+impl From<(f32, f32)> for GlobalCoords {
+    fn from(value: (f32, f32)) -> Self {
+        GlobalCoords { 
+            x: value.0 as i32,
+            y: value.1 as i32
+        }
+    }
+}
+
+impl From<&(f32, f32)> for GlobalCoords {
+    fn from(value: &(f32, f32)) -> Self {
+        GlobalCoords { 
+            x: value.0 as i32,
+            y: value.1 as i32
+        }
+    }
+}
+
 impl From<(i32, i32)> for GlobalCoords {
     fn from(value: (i32, i32)) -> Self {
         GlobalCoords { 
@@ -24,6 +42,24 @@ impl From<&(i32, i32)> for GlobalCoords {
         GlobalCoords { 
             x: value.0,
             y: value.1
+        }
+    }
+}
+
+impl From<GlobalFloatingCoordinates> for GlobalCoords {
+    fn from(value: GlobalFloatingCoordinates) -> Self {
+        GlobalCoords { 
+            x: value.x.trunc() as i32, 
+            y: value.y.trunc() as i32 
+        }
+    }
+}
+
+impl From<&GlobalFloatingCoordinates> for GlobalCoords {
+    fn from(value: &GlobalFloatingCoordinates) -> Self {
+        GlobalCoords { 
+            x: value.x.trunc() as i32, 
+            y: value.y.trunc() as i32 
         }
     }
 }

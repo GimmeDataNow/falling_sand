@@ -9,7 +9,7 @@ use super::coordinates::*;
 use cells::{StateOfAggregation, CellTypeProperties, Cell};
 use super::chunk_manager::chunks::Chunk;
 use crate::custom_error::ChunkError;
-use crate::config::DEFAULT_PLAYER_SPAWN_COORDINATES;
+use crate::config::{DEFAULT_PLAYER_SPAWN_COORDINATES, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 
 use rand::Rng;
@@ -227,7 +227,33 @@ impl ChunkCache {
     /// Sets the Cell inside the buffer.
     /// # Warning: 
     /// It is the responsibility of the caller to ensure that the correct Chunk is loaded!
-    fn set_cell(&mut self, coords: &GlobalCoords, cell: Cell, preffered_chunk: bool) -> Option<()> {
+    pub fn set_cell(&mut self, coords: &GlobalCoords, cell: Cell, preffered_chunk: bool) -> Option<()> {
+
+        // match to the correct chunk tuple index
+        match preffered_chunk {
+            true => {
+
+                // set the cell
+                self.chunk_tuple.0?.cells[Index::from(*coords).i] = cell;
+
+                Some(())
+            },
+            false => {
+
+                // set the cell
+                self.chunk_tuple.1?.cells[Index::from(*coords).i] = cell;
+                Some(())
+            },
+        }
+
+        // code cannot reach this part, so no need for a return
+    }
+
+    /// # Functionality:
+    /// Sets the Cell inside the buffer.
+    pub fn set_cell_force_load(&mut self, world_map: &mut ChunkManager, coords: &GlobalCoords, cell: Cell, preffered_chunk: bool) -> Option<()> {
+
+        self.load_chunk(world_map, &ChunkCoords::from(coords), preffered_chunk);
 
         // match to the correct chunk tuple index
         match preffered_chunk {
@@ -364,5 +390,20 @@ impl ChunkCache {
             StateOfAggregation::ImmovableSolid => Some(()),
             _ => Some(())
         }
+    }
+
+
+
+    pub fn draw_cells(&self, screen: &mut [u8]) {
+
+        // this is horribly slow
+        screen.chunks_mut(4).enumerate().for_each(|(index, color)| {
+
+            let (x, y) = (index as i32 / SCREEN_HEIGHT as i32, index as i32 / SCREEN_WIDTH as i32);
+            let cell = self.get_cell(&GlobalCoords::from((x,y))).unwrap_or((Cell::new(cells::CellType::Pink), false)).0;
+            color.copy_from_slice(&cell.color[0..]);
+            //a.iter_mut().for_each(|p| *p = 200 );
+        });
+
     }
 }

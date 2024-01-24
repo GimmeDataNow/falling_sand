@@ -22,12 +22,12 @@ fn main() {
     let mut world_map = ChunkManager::new();
     let mut chunk_cache = ChunkCache::new();
 
-    for x in (-1..=1) {
-        for y in (-1..=1) {
+    for x in -2..=2 {
+        for y in -2..=2 {
             chunk_cache.load_chunk(&mut world_map, &ChunkCoords::from((0,0)), true);
         }
     }
 
-    let window_info = init_window();
-    game_loop(window_info, input, &mut player, world_map, chunk_cache);
+    let (event_loop, mut window_info) = init_window();
+    game_loop(event_loop, &mut window_info, input, &mut player, &mut world_map, &mut chunk_cache);
 }

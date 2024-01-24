@@ -12,7 +12,6 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
 pub struct WindowInfo {
-    pub event_loop: Result<EventLoop<()>, winit::error::EventLoopError>,
     pub input: WinitInputHelper,
     pub window: winit::window::Window,
     pub pixels: Pixels,
@@ -21,7 +20,7 @@ pub struct WindowInfo {
 
 
 
-pub fn init_window() -> WindowInfo {
+pub fn init_window() -> (Result<EventLoop<()>, winit::error::EventLoopError>, WindowInfo) {
 
     // create a new default event loop
     let event_loop: Result<EventLoop<()>, winit::error::EventLoopError> = EventLoop::new();
@@ -50,11 +49,14 @@ pub fn init_window() -> WindowInfo {
 
     let modifiers: ModifiersState = ModifiersState::default();
 
+    (event_loop,
     WindowInfo { 
-        event_loop, 
         input, 
         window, 
         pixels,
         modifiers,
-    }
+    },
+    )
 }
+
+//pub unsafe fn draw_cells

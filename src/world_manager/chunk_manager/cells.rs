@@ -23,7 +23,9 @@ pub enum CellType {
     Oil,
     Lava,
     Acid,
-    AntiVoid
+    AntiVoid,
+
+    Pink
 }
 
 impl From<CellType> for StateOfAggregation {
@@ -76,7 +78,7 @@ pub struct CellTypeProperties {
 /// This is the look-up-array for other functions to rely on.
 /// # Structure:
 /// It's an static array of `CellTypeProperties` with fixed length.
-pub static CELL_PROPERTIES: [CellTypeProperties; 12] = [    
+pub static CELL_PROPERTIES: [CellTypeProperties; 13] = [    
     CellTypeProperties { name: "Air",       cell_type: CellType::Air,       state: StateOfAggregation::Replaceable,     density: 0.0,   temp_coefficient: 1.0,      flammable: false, base_temp: 298,   base_color: [0,   0,    0, 0] },
     CellTypeProperties { name: "Rock",      cell_type: CellType::Rock,      state: StateOfAggregation::ImmovableSolid,  density: 9.0,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [119, 136,  153, 255] },
     CellTypeProperties { name: "Water",     cell_type: CellType::Water,     state: StateOfAggregation::Liquid,          density: 1.0,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0, 0,  255, 255] },
@@ -88,7 +90,8 @@ pub static CELL_PROPERTIES: [CellTypeProperties; 12] = [
     CellTypeProperties { name: "Oil",       cell_type: CellType::Oil,       state: StateOfAggregation::Liquid,          density: 0.9,   temp_coefficient: 0.1,      flammable: true,  base_temp: 298,   base_color: [55,  58,   54,  255] },
     CellTypeProperties { name: "Lava",      cell_type: CellType::Lava,      state: StateOfAggregation::Liquid,          density: 3.1,   temp_coefficient: 100.0,    flammable: false, base_temp: 298,   base_color: [255, 0,    0,   255] },
     CellTypeProperties { name: "Acid",      cell_type: CellType::Acid,      state: StateOfAggregation::Liquid,          density: 1.4,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0,   255,  0,   255] },
-    CellTypeProperties { name: "Anti-Void", cell_type: CellType::AntiVoid,  state: StateOfAggregation::ImmovableSolid,  density: 9.9,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0, 0,  0, 255] }
+    CellTypeProperties { name: "Anti-Void", cell_type: CellType::AntiVoid,  state: StateOfAggregation::ImmovableSolid,  density: 9.9,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [0, 0,  0, 255] },
+    CellTypeProperties { name: "Pink",      cell_type: CellType::Pink,      state: StateOfAggregation::ImmovableSolid,  density: 9.9,   temp_coefficient: 0.1,      flammable: false, base_temp: 298,   base_color: [255, 192,  203, 255] }
 ];
 
 
@@ -163,6 +166,23 @@ impl Default for Cell {
 }
 
 impl Cell {
+
+    /// # Functionality:
+    /// returns the `Cell` based on the given `CellType`.
+    pub fn new(cell_type: CellType) -> Cell {
+
+        //this is the cell properties that will be used to build the cell
+        let ref_cell_properties: &CellTypeProperties = CellTypeProperties::get_cell_properties(cell_type);
+        
+        //this is the cell that will be returned
+        Cell { 
+            cell_type: ref_cell_properties.cell_type,
+            generation: 0, 
+            color: ref_cell_properties.base_color, 
+            temp: ref_cell_properties.base_temp,
+            moved: true
+        }
+    }
 
     /// # Functionality:
     /// returns the `CellTypeProperties` struct with respect to the `CellType`.
