@@ -34,14 +34,14 @@ impl Chunk {
 
     /// # Functionality:
     /// Returns a filled `Chunk` with the given `CellType` and `ChunkCoords`.
-    pub fn new_from_cell_type(cell_type: CellType, chunk_coords: ChunkCoords) -> Chunk {
+    pub fn new_from_cell_type(cell_type: CellType) -> Chunk {
         let cell: Cell = Cell::build_cell(cell_type);
         Chunk { cells: [cell; CHUNK_LENGTH_USIZE],}
     }
 
     /// # Functionality:
     /// Returns a filled `Chunk` with the given `Cell` and `ChunkCoords`.
-    pub fn new_from_cell(cell: Cell, chunk_coords: ChunkCoords) -> Chunk {
+    pub fn new_from_cell(cell: Cell) -> Chunk {
         Chunk { cells: [cell; CHUNK_LENGTH_USIZE],}
     }
 

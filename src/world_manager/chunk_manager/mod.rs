@@ -8,7 +8,7 @@ pub mod chunks;
 use super::coordinates::*;
 use cells::{StateOfAggregation, CellTypeProperties, Cell, CellType};
 use super::chunk_manager::chunks::Chunk;
-use crate::custom_error::ChunkError;
+use crate::custom_error::*;
 use crate::config::{DEFAULT_PLAYER_SPAWN_COORDINATES, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 
@@ -105,7 +105,7 @@ impl ChunkManager {
         if let Some(chunk) = self.get_chunk_from_cache_mut(&chunk_coords) {
 
             // set the chunk
-            chunk.cells = chunks::Chunk::new_from_cell_type(fill, chunk_coords).cells;
+            chunk.cells = chunks::Chunk::new_from_cell_type(fill).cells;
 
             // return
             return Some(());
@@ -126,7 +126,7 @@ impl ChunkManager {
         if let Some(chunk) = self.get_chunk_from_cache_mut(&chunk_coords) {
 
             // set the chunk
-            chunk.cells = chunks::Chunk::new_from_cell(fill, chunk_coords).cells;
+            chunk.cells = chunks::Chunk::new_from_cell(fill).cells;
 
             // return
             return Some(());
@@ -265,6 +265,141 @@ impl ChunkManager {
         return self.map.get_mut(chunk_coords);
     }
 
+    /// # Functionality:
+    /// Tries to set the cell in either the cache or in the chunk map. Errors if self.get_chunk_from_cache_mut() returns None
+    fn set_cell_cache(&mut self, coords: &GlobalCoords, cell: Cell) -> Result<(), ChunkError> {
+        
+        match self.get_chunk_from_cache_mut(&ChunkCoords::from(coords)) {
+            Some(chunk_mut) => {
+                let index = Index::from(coords);
+                chunk_mut.cells[index.i] = cell;
+                Ok(())
+            },
+            None => Err(ChunkError::TargtNotLoaded),
+        }
+    }
+
+    /// # Functionality:
+    /// Tries to set the cell in either the cache or in the chunk map. Errors if self.get_chunk_from_cache_mut() returns None
+    fn set_cell(&mut self, coords: &GlobalCoords, cell: Cell) -> Result<(), ChunkError> {
+        
+        match self.get_chunk_from_cache_mut(&ChunkCoords::from(coords)) {
+            Some(chunk_mut) => {
+                let index = Index::from(coords);
+                chunk_mut.cells[index.i] = cell;
+                Ok(())
+            },
+            None => Err(ChunkError::TargtNotLoaded),
+        }
+    }
+
+    /// # Functionality:
+    /// Swaps two cells
+    /// # Warning:
+    /// It is the responsibility of the caller to check if it is better to cache the chunks first
+    fn swap_cells(&mut self, cell_1_coords: &GlobalCoords, cell_2_coords: &GlobalCoords) -> Result<(), CellError> {
+
+        let cell_1 = self
+            .get_chunk_from_cache(&ChunkCoords::from(cell_1_coords))
+            .ok_or(CellError::CouldNotComplete)?
+            .cells[Index::from(cell_1_coords).i]
+            .clone();
+
+        let cell_2 = self
+            .get_chunk_from_cache(&ChunkCoords::from(cell_2_coords))
+            .ok_or(CellError::CouldNotComplete)?
+            .cells[Index::from(cell_2_coords).i]
+            .clone();
+
+        self.set_cell(cell_2_coords, cell_1)?;
+        self.set_cell(cell_1_coords, cell_2)?;
+
+        Ok(())
+    }
+
+    /// # Functionality:
+    /// Swaps two cells
+    /// # Warning:
+    /// This function loads the chunks into the cache first
+    fn swap_cells_with_cache(&mut self, cell_1_coords: &GlobalCoords, cell_2_coords: &GlobalCoords) -> Result<(), CellError> {
+
+        let cell_1_chunk_coords = &ChunkCoords::from(cell_1_coords);
+        let cell_2_chunk_coords = &ChunkCoords::from(cell_2_coords);
+
+        self.load_chunk_into_cache(cell_1_chunk_coords, true);
+        self.load_chunk_into_cache(cell_2_chunk_coords, false);
+
+        let cell_1 = self
+            .get_chunk_from_cache(cell_1_chunk_coords)
+            .ok_or(CellError::CouldNotComplete)?
+            .cells[Index::from(cell_1_coords).i]
+            .clone();
+
+        let cell_2 = self
+            .get_chunk_from_cache(cell_2_chunk_coords)
+            .ok_or(CellError::CouldNotComplete)?
+            .cells[Index::from(cell_2_coords).i]
+            .clone();
+
+        self.set_cell(cell_2_coords, cell_1)?;
+        self.set_cell(cell_1_coords, cell_2)?;
+
+        Ok(())
+    }
+
+    /// # Functionality:
+    /// Swaps two cells
+    /// # Warning:
+    /// It is the responsibility of the caller to ensure that the proper chunks are cached for optimal performance
+    fn simulate_gravity(&mut self, coords_1: &GlobalCoords) -> Option<()> {
+
+        let coords_2: &GlobalCoords = &(*coords_1 + (0, 1));
+
+        let cell_1_chunk_coords = ChunkCoords::from(coords_1);
+        let cell_2_chunk_coords = ChunkCoords::from(coords_2);
+
+        let cell_type_1 = self.get_chunk_from_cache(&cell_1_chunk_coords)?.cells[Index::from(coords_1).i].cell_type;
+        let cell_type_2 = self.get_chunk_from_cache(&cell_2_chunk_coords)?.cells[Index::from(coords_2).i].cell_type;
+
+        let cell_1_properties = CellTypeProperties::from(cell_type_1);
+        let cell_2_properties = CellTypeProperties::from(cell_type_2);
+
+        match (cell_1_properties.state, cell_2_properties.state) {
+            // eliminate the ImmovableSolids immediately
+            (StateOfAggregation::ImmovableSolid, _) => None,
+            (_, StateOfAggregation::ImmovableSolid) => None,
+
+            // if the target is of a granular type then skip it
+            (_, StateOfAggregation::Granular) => None,
+
+            // no more checks are needed because the first match (the one above) prevents this
+            (StateOfAggregation::Granular, _) => {
+
+                // swap
+                self.swap_cells(coords_1, coords_2).ok()?;
+
+                Some(())
+            },
+
+            // liquids
+            (StateOfAggregation::Liquid, _) => {
+
+                // density check
+                if cell_1_properties.density > cell_2_properties.density {  self.swap_cells( coords_1, coords_2).ok()? };
+
+                Some(())
+            },
+
+            // discard all else
+            (_, _) => None,
+        }
+    }
+
+    // more stuff here
+    // get cell
+    // set cell
+    // swap cell
+    // simulate gravity
 }
 
 /// # Functionality:

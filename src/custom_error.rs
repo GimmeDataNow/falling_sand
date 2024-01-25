@@ -7,8 +7,7 @@ pub enum CellError {
     OutOfBounds,
     UndefinedBehavior,
     CouldNotComplete,
-    FailedToSave,
-    FailedToUnload,
+    FailedToSwap,
     TargtNotLoaded
 }
 
@@ -31,6 +30,14 @@ impl From<CellError> for ChunkError {
     fn from(value: CellError) -> Self {
         match value {
             _ => ChunkError::None,
+        }
+    }
+}
+
+impl From<ChunkError> for CellError {
+    fn from(value: ChunkError) -> Self {
+        match value {
+            _ => CellError::CouldNotComplete,
         }
     }
 }
