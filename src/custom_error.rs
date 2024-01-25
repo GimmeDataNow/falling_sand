@@ -15,6 +15,7 @@ pub enum CellError {
 pub enum ChunkError {
     None,
     TargtNotLoaded,
+    TargtAlreadyLoaded,
     OutOfBounds,
     FailedToUnload,
     CouldNotComplete

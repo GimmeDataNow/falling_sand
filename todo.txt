@@ -32,3 +32,5 @@ V3 from 02.06.2023+:
 - consider making is_inbounds() return and error instead of a bool
 
 make force load set cell
+
+LEARN RWLOCK<>!!!!!!!!!!!!

@@ -6,7 +6,7 @@ pub mod cells;
 pub mod chunks;
 
 use super::coordinates::*;
-use cells::{StateOfAggregation, CellTypeProperties, Cell};
+use cells::{StateOfAggregation, CellTypeProperties, Cell, CellType};
 use super::chunk_manager::chunks::Chunk;
 use crate::custom_error::ChunkError;
 use crate::config::{DEFAULT_PLAYER_SPAWN_COORDINATES, SCREEN_HEIGHT, SCREEN_WIDTH};
@@ -21,55 +21,188 @@ use rand::Rng;
 /// This should probably implement `Singletons` to ensure that there is only one instance of the `ChunkManager`.
 pub struct ChunkManager {
     pub generation: u16,
+    pub chunk_cache: ((Option<ChunkCoords>, Option<Chunk>), (Option<ChunkCoords>, Option<Chunk>)),
     pub map: fnv::FnvHashMap<ChunkCoords, chunks::Chunk>,
 }
 
 impl ChunkManager {
     pub fn new() -> Self {
-
-        // probably a better way to do this but I don't know how
-        // I really dislike the implicit type declaration that is made by default_coords and val
-        let mut map = fnv::FnvHashMap::default();
-
-        // player/camera spawns here
-        let default_coords: ChunkCoords = ChunkCoords::from( GlobalCoords::from(DEFAULT_PLAYER_SPAWN_COORDINATES) );
-
-        // here the loading of the default chunk is done
-        let val: chunks::Chunk = chunks::Chunk::default();
-
-        // dump the loaded chunk into the map as a default
-        map.insert(default_coords, val);
-
-        // return
-        ChunkManager { map, generation: 0 }
+        Self {
+            generation: 0,
+            chunk_cache: ((None, None), (None, None)),
+            map: fnv::FnvHashMap::default(),
+        }
     }
 
-    /// # Functionality:
-    /// Return the chunk in the hash map
-    pub fn get_chunk(&mut self, chunk_coords: &ChunkCoords) -> Option<&mut Chunk> {
-        self.map.get_mut(chunk_coords)
-    }
-
-    /// # Functionality:
-    /// Convert the coordinates to the index for further processing.
-    pub fn set_chunk(&mut self, global_coords: &GlobalCoords, cell_type: cells::CellType) -> Option<()> {
-        //let chunk_coords: (i32, i32) = ChunkManager::to_chunk_coords(global_coords);
-        let chunk_coords: ChunkCoords = ChunkCoords::from(*global_coords);
-        if let Some(chunk) = self.map.get_mut(&chunk_coords) {
-            chunk.cells = chunks::Chunk::new_with_fill(cell_type, chunk_coords).cells;
-            return Some(());
+    pub fn is_cached(&self, chunk_coords: &ChunkCoords) -> Option<bool> {
+        if self.chunk_cache.0.0 == Some(*chunk_coords) {
+            return Some(true);
+        }
+        if self.chunk_cache.1.0 == Some(*chunk_coords) {
+            return Some(false);
         }
         None
     }
 
     /// # Functionality:
+    /// Return a reference to a chunk from the chunk map
+    pub fn get_chunk_from_map(&self, chunk_coords: &ChunkCoords) -> Option<&Chunk> {
+        // this is just to hide the .map call
+        self.map.get(chunk_coords)
+    }
+
+    /// # Functionality:
+    /// Return a mutable reference to a chunk from the chunk map
+    pub fn get_chunk_from_map_mut(&mut self, chunk_coords: &ChunkCoords) -> Option<&mut Chunk> {
+        // this is just to hide the .map call
+        self.map.get_mut(chunk_coords)
+    }
+
+    /// # Functionality:
+    /// Try to return a reference to a chunk from the chunk cache. If the retreival fails, revert to getting it from the chunk map
+    pub fn get_chunk_from_cache(&self, chunk_coords: &ChunkCoords) -> Option<&Chunk> {
+
+        // check if it is cached
+        match self.is_cached(chunk_coords) {
+
+            // chunk_cache.0.1 is the chunk in the first slot of the ((Option<ChunkCoords>, Option<Chunk>), (Option<ChunkCoords>, Option<Chunk>))
+            Some(true) => self.chunk_cache.0.1.as_ref(),
+
+            // chunk_cache.1.1 is the chunk in the second slot of the ((Option<ChunkCoords>, Option<Chunk>), (Option<ChunkCoords>, Option<Chunk>))
+            Some(false) => self.chunk_cache.1.1.as_ref(),
+
+            // default to the chunk map
+            None => self.get_chunk_from_map(chunk_coords),
+        }
+    }
+
+    /// # Functionality:
+    /// Try to return a mutable reference to a chunk from the chunk cache. If the retreival fails, revert to getting it from the chunk map
+    pub fn get_chunk_from_cache_mut(&mut self, chunk_coords: &ChunkCoords) -> Option<&mut Chunk> {
+
+        // check if it is cached
+        match self.is_cached(chunk_coords) {
+
+            // chunk_cache.0.1 is the chunk in the first slot of the ((Option<ChunkCoords>, Option<Chunk>), (Option<ChunkCoords>, Option<Chunk>))
+            Some(true) => self.chunk_cache.0.1.as_mut(),
+
+            // chunk_cache.1.1 is the chunk in the second slot of the ((Option<ChunkCoords>, Option<Chunk>), (Option<ChunkCoords>, Option<Chunk>))
+            Some(false) => self.chunk_cache.1.1.as_mut(),
+
+            // default to the chunk map
+            None => self.get_chunk_from_map_mut(chunk_coords),
+        }
+    }
+
+    /// # Functionality:
+    /// Tries to set the chunk to a specific fill.
+    fn set_chunk_from_cell_type(&mut self, global_coords: &GlobalCoords, fill: CellType) -> Option<()> {
+
+        // convert to ChunkCoords
+        let chunk_coords: ChunkCoords = ChunkCoords::from(*global_coords);
+
+        // check if the chunk exists
+        if let Some(chunk) = self.get_chunk_from_cache_mut(&chunk_coords) {
+
+            // set the chunk
+            chunk.cells = chunks::Chunk::new_from_cell_type(fill, chunk_coords).cells;
+
+            // return
+            return Some(());
+        }
+
+        // return
+        None
+    }
+
+    /// # Functionality:
+    /// Tries to set the chunk to a specific fill.
+    fn set_chunk_from_cell(&mut self, global_coords: &GlobalCoords, fill: Cell) -> Option<()> {
+
+        // convert to ChunkCoords
+        let chunk_coords: ChunkCoords = ChunkCoords::from(*global_coords);
+
+        // check if the chunk exists
+        if let Some(chunk) = self.get_chunk_from_cache_mut(&chunk_coords) {
+
+            // set the chunk
+            chunk.cells = chunks::Chunk::new_from_cell(fill, chunk_coords).cells;
+
+            // return
+            return Some(());
+        }
+
+        // return
+        None
+    }
+
+    /// # Functionality:
+    /// Tries to set the chunk to a specific fill.
+    fn set_chunk_from_chunk(&mut self, global_coords: &GlobalCoords, fill: Chunk) -> Option<()> {
+
+        // convert to ChunkCoords
+        let chunk_coords: ChunkCoords = ChunkCoords::from(*global_coords);
+
+        // check if the chunk exists
+        if let Some(chunk) = self.get_chunk_from_cache_mut(&chunk_coords) {
+
+            // set the chunk
+            chunk.cells = fill.cells;
+
+            // return
+            return Some(());
+        }
+
+        // return
+        None
+    }
+
+    /// # Functionality:
+    /// Load the chunk into the cache. Does not check if the chunk is already loaded or if the Option<Chunk> is None.
+    pub fn load_chunk_into_cache(&mut self, chunk_coords: &ChunkCoords, preferred_slot: bool) {
+
+        // get the chunk from the map
+        let chunk = self.get_chunk_from_map(chunk_coords).cloned();
+
+        // match the slot
+        match preferred_slot {
+            true => {self.chunk_cache.0 = (Some(*chunk_coords), chunk)},
+            false => {self.chunk_cache.1 = (Some(*chunk_coords), chunk)},
+        }
+    }
+
+    /// # Functionality:
+    /// Load the chunk into the cache. Does not check if the chunk is already loaded or if the Option<Chunk> is None.
+    pub fn try_load_chunk_into_cache(&mut self, chunk_coords: &ChunkCoords, preferred_slot: bool) -> Result<(), ChunkError> {
+
+        // is the chunk loaded
+        match self.get_chunk_from_map(chunk_coords) {
+
+            Some(chunk) => {
+
+                // clone the chunk
+                let chunk_option = Some(*chunk);
+
+                // match slot
+                match preferred_slot {
+                    true => {self.chunk_cache.0 = (Some(*chunk_coords), chunk_option)},
+                    false => {self.chunk_cache.1 = (Some(*chunk_coords), chunk_option)},
+                }
+            },
+
+            // error
+            None => return Err(ChunkError::TargtNotLoaded),
+        }
+        Ok(())
+    }
+
+    /// # Functionality:
     /// Save the chunk to a file
-    pub fn save_chunk(&self, coords: &ChunkCoords) -> Result<(), ChunkError> {
+    pub fn save_chunk(&self, chunk_coords: &ChunkCoords) -> Result<(), ChunkError> {
         Ok(
-            self.map
-                .get(coords)
+            self.get_chunk_from_cache(chunk_coords)
                 .ok_or(ChunkError::OutOfBounds)?
-                .save_chunk()?
+                .save_chunk(chunk_coords)?
         )
     }
 
@@ -77,26 +210,50 @@ impl ChunkManager {
     /// Save the chunk to a file and then unload it from memory
     pub fn unload_chunk_at_coords(&mut self, chunk_coords: &ChunkCoords) -> Result<(), ChunkError> {
 
-        // check if the chunk is loaded
-        if self.map.contains_key(chunk_coords) {
+        // check if the chunk is even loaded
+        match self.get_chunk_from_cache(chunk_coords) {
 
-            // Save the chunk to disk before unloading if needed
-            self.map.get(chunk_coords).ok_or(ChunkError::TargtNotLoaded)?.save_chunk()?;
+            // is loaded
+            Some(chunk) => {
 
-            // Remove the chunk from the hashmap to unload it
-            self.map.remove(chunk_coords);
-            Ok(())
-        } else {
+                // this will error if the chunk fails to save
+                // the error is ignored here which may lead to errors
+                let _ = chunk.save_chunk(chunk_coords);
 
-            // error if the chunk is not loaded
-            Err(ChunkError::FailedToUnload)
-        }
+                // to delete from the cache the position in the cache is needed
+                match self.is_cached(chunk_coords) {
+
+                    // slot 0
+                    Some(true) => self.chunk_cache.0 = (None, None),
+
+                    // slot 2
+                    Some(false) => self.chunk_cache.1 = (None, None),
+
+                    // not in cache
+                    None => (),
+                }
+                self.map.remove(chunk_coords);
+                return Ok(());
+            },
+
+            // not loaded
+            None => return Err(ChunkError::TargtNotLoaded)
+        };
     }
 
     /// # Functionality:
-    /// Loads a chunk into memory / into the hashmap
-    pub fn load_chunk(&mut self, chunk_coords: ChunkCoords) -> Option<Chunk> {
+    /// Loads a chunk into the hashmap. Overrides the chunk if it is already loaded
+    pub fn insert_chunk_into_map(&mut self, chunk_coords: ChunkCoords) -> Option<Chunk> {
         self.map.insert(chunk_coords, chunks::Chunk::load_chunk(&chunk_coords)?)
+    }
+
+    /// # Functionality:
+    /// Tries to load a chunk into the hashmap. Errors if the chunk is already loaded
+    pub fn try_insert_chunk_into_map(&mut self, chunk_coords: ChunkCoords) -> Result<(), ChunkError> {
+        match self.map.contains_key(&chunk_coords) {
+            true => return Err(ChunkError::TargtAlreadyLoaded),
+            false => Ok(()),
+        }
     }
 
     /// # Functionality:

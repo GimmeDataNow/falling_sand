@@ -19,14 +19,13 @@ use std::fs;
 /// This has to use `serde_big_array` crate to derive the serialization and deserialization functions since they are not serializable by default (due to their size).
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chunk {
-    pub chunk_coordinates: ChunkCoords,
     #[serde(with = "BigArray")]
     pub cells: [Cell; CHUNK_LENGTH_USIZE],
 }
 
 impl Default for Chunk {
     fn default() -> Self {
-        Chunk { cells: [Cell::default(); CHUNK_LENGTH_USIZE], chunk_coordinates: ChunkCoords{ x: 0, y:0 } }
+        Chunk { cells: [Cell::default(); CHUNK_LENGTH_USIZE] }
     }
 }
 
@@ -35,9 +34,15 @@ impl Chunk {
 
     /// # Functionality:
     /// Returns a filled `Chunk` with the given `CellType` and `ChunkCoords`.
-    pub fn new_with_fill(cell_type: CellType, chunk_coords: ChunkCoords) -> Chunk {
+    pub fn new_from_cell_type(cell_type: CellType, chunk_coords: ChunkCoords) -> Chunk {
         let cell: Cell = Cell::build_cell(cell_type);
-        Chunk { chunk_coordinates: chunk_coords, cells: [cell; CHUNK_LENGTH_USIZE],}
+        Chunk { cells: [cell; CHUNK_LENGTH_USIZE],}
+    }
+
+    /// # Functionality:
+    /// Returns a filled `Chunk` with the given `Cell` and `ChunkCoords`.
+    pub fn new_from_cell(cell: Cell, chunk_coords: ChunkCoords) -> Chunk {
+        Chunk { cells: [cell; CHUNK_LENGTH_USIZE],}
     }
 
     /// # Functionality:
@@ -48,10 +53,10 @@ impl Chunk {
 
     /// # Functionality:
     /// Writes the given `Chunk` to a file with the appropriate file `path`.
-    pub fn save_chunk(&self) -> Result<(), CellError> {
+    pub fn save_chunk(&self, chunk_coords: &ChunkCoords) -> Result<(), CellError> {
 
         // get the save path
-        let file_path: String = Chunk::get_save_path(&self.chunk_coordinates);
+        let file_path: String = Chunk::get_save_path(chunk_coords);
 
         // to ron format
         let chunk_ron: String = ron::ser::to_string_pretty(self, Default::default()).map_err(|_| CellError::CouldNotComplete)?;

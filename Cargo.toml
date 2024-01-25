@@ -34,3 +34,6 @@ egui-winit ={ version = "0.25.0", default-features = false, features = ["links"]
 egui-wgpu = "0.25.0"
 
 fps_counter = "3.0.0"
+
+[profile.dev]
+opt-level = 1
