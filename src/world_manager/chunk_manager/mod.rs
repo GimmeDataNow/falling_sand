@@ -244,7 +244,13 @@ impl ChunkManager {
     /// # Functionality:
     /// Loads a chunk into the hashmap. Overrides the chunk if it is already loaded
     pub fn insert_chunk_into_map(&mut self, chunk_coords: ChunkCoords) -> Option<Chunk> {
-        self.map.insert(chunk_coords, chunks::Chunk::load_chunk(&chunk_coords)?)
+        self.map.insert(chunk_coords, chunks::Chunk::default())
+    }
+
+    /// # Functionality:
+    /// Loads a chunk into the hashmap. Overrides the chunk if it is already loaded
+    pub fn load_chunk_into_map(&mut self, chunk_coords: &ChunkCoords) -> Option<Chunk> {
+        self.insert_chunk_into_map(*chunk_coords)
     }
 
     /// # Functionality:
@@ -258,7 +264,7 @@ impl ChunkManager {
 
     /// # Functionality:
     /// Check if the `Chunk` is loaded in the `chunk-map`. If not, it inserts the loaded chunk into the `chunk-map` and returns it.
-    fn get_and_force_load_chunk(&mut self, chunk_coords: &ChunkCoords) -> Option<&mut Chunk> {
+    pub fn get_and_force_load_chunk(&mut self, chunk_coords: &ChunkCoords) -> Option<&mut Chunk> {
         if !self.map.contains_key(chunk_coords) {
             self.map.insert(*chunk_coords, Chunk::default());
         }
@@ -267,7 +273,7 @@ impl ChunkManager {
 
     /// # Functionality:
     /// Tries to set the cell in either the cache or in the chunk map. Errors if self.get_chunk_from_cache_mut() returns None
-    fn set_cell_cache(&mut self, coords: &GlobalCoords, cell: Cell) -> Result<(), ChunkError> {
+    pub fn set_cell_cache(&mut self, coords: &GlobalCoords, cell: Cell) -> Result<(), ChunkError> {
         
         match self.get_chunk_from_cache_mut(&ChunkCoords::from(coords)) {
             Some(chunk_mut) => {
@@ -281,7 +287,7 @@ impl ChunkManager {
 
     /// # Functionality:
     /// Tries to set the cell in either the cache or in the chunk map. Errors if self.get_chunk_from_cache_mut() returns None
-    fn set_cell(&mut self, coords: &GlobalCoords, cell: Cell) -> Result<(), ChunkError> {
+    pub fn set_cell(&mut self, coords: &GlobalCoords, cell: Cell) -> Result<(), ChunkError> {
         
         match self.get_chunk_from_cache_mut(&ChunkCoords::from(coords)) {
             Some(chunk_mut) => {
@@ -297,7 +303,7 @@ impl ChunkManager {
     /// Swaps two cells
     /// # Warning:
     /// It is the responsibility of the caller to check if it is better to cache the chunks first
-    fn swap_cells(&mut self, cell_1_coords: &GlobalCoords, cell_2_coords: &GlobalCoords) -> Result<(), CellError> {
+    pub fn swap_cells(&mut self, cell_1_coords: &GlobalCoords, cell_2_coords: &GlobalCoords) -> Result<(), CellError> {
 
         let cell_1 = self
             .get_chunk_from_cache(&ChunkCoords::from(cell_1_coords))
@@ -321,7 +327,7 @@ impl ChunkManager {
     /// Swaps two cells
     /// # Warning:
     /// This function loads the chunks into the cache first
-    fn swap_cells_with_cache(&mut self, cell_1_coords: &GlobalCoords, cell_2_coords: &GlobalCoords) -> Result<(), CellError> {
+    pub fn swap_cells_with_cache(&mut self, cell_1_coords: &GlobalCoords, cell_2_coords: &GlobalCoords) -> Result<(), CellError> {
 
         let cell_1_chunk_coords = &ChunkCoords::from(cell_1_coords);
         let cell_2_chunk_coords = &ChunkCoords::from(cell_2_coords);
@@ -351,7 +357,7 @@ impl ChunkManager {
     /// Swaps two cells
     /// # Warning:
     /// It is the responsibility of the caller to ensure that the proper chunks are cached for optimal performance
-    fn simulate_gravity(&mut self, coords_1: &GlobalCoords) -> Option<()> {
+    pub fn simulate_gravity(&mut self, coords_1: &GlobalCoords) -> Option<()> {
 
         let coords_2: &GlobalCoords = &(*coords_1 + (0, 1));
 
@@ -400,6 +406,34 @@ impl ChunkManager {
     // set cell
     // swap cell
     // simulate gravity
+
+    pub fn draw_cells(&self, screen: &mut [u8]) {
+
+        // this is horribly slow
+        // split the iterator into chunks of 4
+        // meaning that this makes an iterator over screen with screen.chunks_mut(4)[index] => len() = 4
+        screen.chunks_mut(4).enumerate().for_each(|(index, color)| {
+
+            // this conversion seems to be alright
+            let (x, y) = (index as i32 % SCREEN_WIDTH as i32, index as i32 / SCREEN_WIDTH as i32);
+            //let index = Index::from(GlobalCoords::from((x, y))).i;
+
+            // println
+            // println!("-> x:{} y:{}", x, y);
+            // println!("index: {}", index);
+            // println!("computed index: {}", Index::from(GlobalCoords::from((x,y))).i);
+
+
+            let cell = self
+                .get_chunk_from_cache(&ChunkCoords::from(GlobalCoords::from((x, y))))
+                .unwrap_or(&Chunk::new_from_cell_type(cells::CellType::Pink))
+                // holy moly this is fucked - overflow without the min()
+                .cells[std::cmp::min(Index::from(GlobalCoords::from((x, y))).i, 63)];
+            color.copy_from_slice(&cell.color[0..]);
+            //a.iter_mut().for_each(|p| *p = 200 );
+        });
+
+    }
 }
 
 /// # Functionality:
@@ -692,6 +726,8 @@ impl ChunkCache {
         screen.chunks_mut(4).enumerate().for_each(|(index, color)| {
 
             let (x, y) = (index as i32 / SCREEN_HEIGHT as i32, index as i32 / SCREEN_WIDTH as i32);
+
+            // soooo turns out this get_cell() call was always erroring and returning the default
             let cell = self.get_cell(&GlobalCoords::from((x,y))).unwrap_or((Cell::new(cells::CellType::Pink), false)).0;
             color.copy_from_slice(&cell.color[0..]);
             //a.iter_mut().for_each(|p| *p = 200 );

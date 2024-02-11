@@ -12,7 +12,7 @@ use winit::event_loop::EventLoop;
 
 
 
-pub fn game_loop(event_loop: Result<EventLoop<()>, winit::error::EventLoopError>, window_info: &mut WindowInfo, input: &mut WinitInputHelper, player: &mut Player, world_manager: &mut world_manager::chunk_manager::ChunkManager, chunk_cache: &mut world_manager::chunk_manager::ChunkCache) {
+pub fn game_loop(event_loop: Result<EventLoop<()>, winit::error::EventLoopError>, window_info: &mut WindowInfo, input: &mut WinitInputHelper, player: &mut Player, world_manager: &mut world_manager::chunk_manager::ChunkManager) {
 
 
     match event_loop {
@@ -44,7 +44,7 @@ pub fn game_loop(event_loop: Result<EventLoop<()>, winit::error::EventLoopError>
                 map_key!(KeyCode::KeyS, KeyCode::ArrowDown, { player.position += (0.0, -1.0) });
                 map_key!(KeyCode::KeyD, KeyCode::ArrowRight,{ player.position += (1.0, 0.0)  });
                 map_key!(KeyCode::Numpad5,                  { println!("{}", player.position)});
-                map_key!(KeyCode::Enter,                    {chunk_cache.set_cell_force_load(world_manager, &GlobalCoords::from(player.position), Cell::new(CellType::Sand), true)});
+                map_key!(KeyCode::Enter,                    {world_manager.set_cell(&GlobalCoords::from(player.position), Cell::new(CellType::Pink))});
 
                 // mouse input handeling
                 let cursor_diff = input.cursor_diff();
@@ -63,7 +63,7 @@ pub fn game_loop(event_loop: Result<EventLoop<()>, winit::error::EventLoopError>
 
                     (WindowEvent::RedrawRequested, _) => { 
                         /* renderer here */
-                        chunk_cache.draw_cells(window_info.pixels.frame_mut());
+                        world_manager.draw_cells(window_info.pixels.frame_mut());
 
                         let _render_result = window_info.pixels.render_with(|encoder, render_target, context| {
 

@@ -1,4 +1,4 @@
-use crate::config::CHUNK_SIZE_I32;
+use crate::config::{CHUNK_WIDTH_I32, CHUNK_SIZE_I32};
 use std::{fmt, ops::{Add, AddAssign}};
 use serde::{Serialize, Deserialize};
 
@@ -82,8 +82,8 @@ pub struct ChunkCoords {
 impl From<(i32, i32)> for ChunkCoords {
     fn from(coords: (i32, i32)) -> Self {
         ChunkCoords { 
-            x: if coords.0 >= 0 { coords.0 / CHUNK_SIZE_I32 + 1 } else { coords.0 / CHUNK_SIZE_I32 },
-            y: if coords.1 >= 0 { coords.1 / CHUNK_SIZE_I32 + 1 } else { coords.1 / CHUNK_SIZE_I32 }
+            x: if coords.0 >= 0 { coords.0 / CHUNK_WIDTH_I32 + 1 } else { coords.0 / CHUNK_WIDTH_I32 },
+            y: if coords.1 >= 0 { coords.1 / CHUNK_WIDTH_I32 + 1 } else { coords.1 / CHUNK_SIZE_I32 }
         }
     }
 }
@@ -91,8 +91,8 @@ impl From<(i32, i32)> for ChunkCoords {
 impl From<&(i32, i32)> for ChunkCoords {
     fn from(coords: &(i32, i32)) -> Self {
         ChunkCoords { 
-            x: if coords.0 >= 0 { coords.0 / CHUNK_SIZE_I32 + 1 } else { coords.0 / CHUNK_SIZE_I32 },
-            y: if coords.1 >= 0 { coords.1 / CHUNK_SIZE_I32 + 1 } else { coords.1 / CHUNK_SIZE_I32 }
+            x: if coords.0 >= 0 { coords.0 / CHUNK_WIDTH_I32 + 1 } else { coords.0 / CHUNK_WIDTH_I32 },
+            y: if coords.1 >= 0 { coords.1 / CHUNK_WIDTH_I32 + 1 } else { coords.1 / CHUNK_WIDTH_I32 }
         }
     }
 }
@@ -100,8 +100,8 @@ impl From<&(i32, i32)> for ChunkCoords {
 impl From<GlobalCoords> for ChunkCoords {
     fn from(coords: GlobalCoords) -> Self {
         ChunkCoords { 
-            x: if coords.x >= 0 { coords.x / CHUNK_SIZE_I32 + 1 } else { coords.x / CHUNK_SIZE_I32 },
-            y: if coords.y >= 0 { coords.x / CHUNK_SIZE_I32 + 1 } else { coords.y / CHUNK_SIZE_I32 }
+            x: if coords.x >= 0 { coords.x / CHUNK_WIDTH_I32 + 1 } else { coords.x / CHUNK_WIDTH_I32 },
+            y: if coords.y >= 0 { coords.x / CHUNK_WIDTH_I32 + 1 } else { coords.y / CHUNK_WIDTH_I32 }
         }
     }
 }
@@ -109,8 +109,8 @@ impl From<GlobalCoords> for ChunkCoords {
 impl From<&GlobalCoords> for ChunkCoords {
     fn from(coords: &GlobalCoords) -> Self {
         ChunkCoords { 
-            x: if coords.x >= 0 { coords.x / CHUNK_SIZE_I32 + 1 } else { coords.x / CHUNK_SIZE_I32 },
-            y: if coords.y >= 0 { coords.x / CHUNK_SIZE_I32 + 1 } else { coords.y / CHUNK_SIZE_I32 }
+            x: if coords.x >= 0 { coords.x / CHUNK_WIDTH_I32 + 1 } else { coords.x / CHUNK_WIDTH_I32 },
+            y: if coords.y >= 0 { coords.x / CHUNK_WIDTH_I32 + 1 } else { coords.y / CHUNK_WIDTH_I32 }
         }
     }
 }
@@ -136,8 +136,8 @@ pub struct LocalCoords {
 impl From<GlobalCoords> for LocalCoords {
     fn from(coords: GlobalCoords) -> Self {
         LocalCoords { 
-            x: coords.x.rem_euclid(CHUNK_SIZE_I32),
-            y: coords.y.rem_euclid(CHUNK_SIZE_I32)
+            x: coords.x.rem_euclid(CHUNK_WIDTH_I32),
+            y: coords.y.rem_euclid(CHUNK_WIDTH_I32)
         }
     }
 }
@@ -151,25 +151,25 @@ pub struct Index {
 
 impl From<GlobalCoords> for Index {
     fn from(coords: GlobalCoords) -> Self {
-        Index { i: (coords.x.rem_euclid(CHUNK_SIZE_I32) + coords.y.rem_euclid(CHUNK_SIZE_I32) * CHUNK_SIZE_I32) as usize }
+        Index { i: (coords.x.rem_euclid(CHUNK_WIDTH_I32) + coords.y.rem_euclid(CHUNK_WIDTH_I32) * CHUNK_WIDTH_I32) as usize }
     }
 }
 
 impl From<&GlobalCoords> for Index {
     fn from(coords: &GlobalCoords) -> Self {
-        Index { i: (coords.x.rem_euclid(CHUNK_SIZE_I32) + coords.y.rem_euclid(CHUNK_SIZE_I32) * CHUNK_SIZE_I32) as usize }
+        Index { i: (coords.x.rem_euclid(CHUNK_WIDTH_I32) + coords.y.rem_euclid(CHUNK_WIDTH_I32) * CHUNK_WIDTH_I32) as usize }
     }
 }
 
 impl From<LocalCoords> for Index {
     fn from(coords: LocalCoords) -> Self {
-        Index { i: (coords.x + coords.y * CHUNK_SIZE_I32) as usize }
+        Index { i: (coords.x + coords.y * CHUNK_WIDTH_I32) as usize }
     }
 }
 
 impl From<&LocalCoords> for Index {
     fn from(coords: &LocalCoords) -> Self {
-        Index { i: (coords.x + coords.y * CHUNK_SIZE_I32) as usize }
+        Index { i: (coords.x + coords.y * CHUNK_WIDTH_I32) as usize }
     }
 }
 
@@ -224,6 +224,6 @@ impl AddAssign<(f32, f32)> for GlobalFloatingCoordinates {
 
 impl fmt::Display for GlobalFloatingCoordinates {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}_{}", self.x, self.y)
+        write!(f, "x: {} y: {}", self.x, self.y)
     }
 }

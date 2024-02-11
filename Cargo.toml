@@ -1,6 +1,6 @@
 [package]
 name = "falling-sand"
-version = "0.1.0"
+version = "0.4.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -25,14 +25,24 @@ serde_derive = "1.0.195"
 serde-big-array = "0.5.1"
 ron ="0.8.1"
 
+# errors
+env_logger = "0.11.0"
+log = "0.4"
+
+# window
+winit = {version = "0.28.0"}
+# winit_input_helper = "0.14.1"
+
+# wgpu
+wgpu = "0.18.0"
+pollster = "0.3"
+bytemuck = { version = "1.12", features = [ "derive" ] }
+image = {version = "0.24.8", default-features = false, features = ["png", "jpeg"]}
 # temporary renderer
 pixels = "0.13.0"
-winit = "0.29.10"
-winit_input_helper = "0.15.3"
-egui ="0.25.0"
-egui-winit ={ version = "0.25.0", default-features = false, features = ["links"]}
-egui-wgpu = "0.25.0"
 
+
+# fps counter
 fps_counter = "3.0.0"
 
 [profile.dev]

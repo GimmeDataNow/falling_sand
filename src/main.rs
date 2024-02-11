@@ -1,13 +1,18 @@
-mod game_loop;
+// mod game_loop;
 
 mod world_manager;
 mod custom_error;
 mod config;
 mod window_utils;
 
-use game_loop::game_loop;
-use window_utils::rendering_engine::using_pixels_lib::init_window;
-use winit_input_helper::WinitInputHelper;
+use crate::window_utils::rendering_engine::wgpu;
+
+use pollster::FutureExt;
+// use game_loop::game_loop;
+//use window_utils::rendering_engine::using_pixels_lib::init_window;
+// use winit_input_helper::WinitInputHelper;
+use crate::world_manager::chunk_manager::chunks::Chunk;
+use crate::world_manager::chunk_manager::cells::CellType;
 use world_manager::coordinates::ChunkCoords;
 use crate::world_manager::entity_manager::entity::player::Player;
 use crate::world_manager::chunk_manager::{ChunkCache, ChunkManager};
@@ -20,18 +25,23 @@ use window_utils::rendering_engine::vulkan::init_vulkano;
 
 
 fn main() {
+    
+    let chunk = Chunk::new_from_cell_type(CellType::Pink);
+    println!("{}", std::mem::size_of::<Chunk>());
+    let _ = chunk.save_chunk(&ChunkCoords::from((0, 0))).expect("failed to save");
+    wgpu::wgpu_run().block_on();
+    
     // init_vulkano();
-    let mut input = &mut WinitInputHelper::new();
-    let mut player: Player = Player::default();
-    let mut world_map = ChunkManager::new();
-    let mut chunk_cache = ChunkCache::new();
+    // let mut input = &mut WinitInputHelper::new();
+    // let mut player: Player = Player::default();
+    // let mut world_map = ChunkManager::new();
     
-    for x in -2..=2 {
-        for y in -2..=2 {
-            chunk_cache.load_chunk(&mut world_map, &ChunkCoords::from((0,0)), true);
-        }
-    }
+    // for x in -4..=4 {
+    //     for y in -4..=4 {
+    //         world_map.load_chunk_into_map(&ChunkCoords::from((x,y)));
+    //     }
+    // }
     
-    let (event_loop, mut window_info) = init_window();
-    game_loop(event_loop, &mut window_info, input, &mut player, &mut world_map, &mut chunk_cache);
+    //let (event_loop, mut window_info) = init_window();
+    //game_loop(event_loop, &mut window_info, input, &mut player, &mut world_map);
 }
