@@ -5,7 +5,7 @@ mod custom_error;
 mod config;
 mod window_utils;
 
-use crate::window_utils::rendering_engine::{wgpu, winit};
+use crate::window_utils::rendering_engine::winit;
 
 use pollster::FutureExt;
 // use game_loop::game_loop;
@@ -14,7 +14,6 @@ use pollster::FutureExt;
 use crate::world_manager::chunk_manager::chunks::Chunk;
 use crate::world_manager::chunk_manager::cells::CellType;
 use world_manager::coordinates::ChunkCoords;
-use crate::world_manager::entity_manager::entity::player::Player;
 use crate::world_manager::chunk_manager::{ChunkCache, ChunkManager};
 
 

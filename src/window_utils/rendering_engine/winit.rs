@@ -16,7 +16,7 @@ pub async fn wgpu_run() {
 
     let event_loop = EventLoop::new().expect("failed to create the event_loop");
 
-    let window = WindowBuilder::new()
+    let window: winit::window::Window = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(400.0, 200.0))
         .build(&event_loop).unwrap();
 
