@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use std::{error::Error, sync::Arc};
 use vulkano::{
     buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage},

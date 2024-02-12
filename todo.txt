@@ -31,6 +31,7 @@ V3 from 02.06.2023+:
 - liquids mostly fixed, but if many are simulated then errors may occur >>> fixed liquids. may still fail at density based movement
 - consider making is_inbounds() return and error instead of a bool
 
+
 make force load set cell
 
 LEARN RWLOCK<>!!!!!!!!!!!!

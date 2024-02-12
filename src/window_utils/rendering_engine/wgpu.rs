@@ -1,29 +1,31 @@
+use std::sync::Arc;
 use winit::{
-    dpi::LogicalSize, event::*, event_loop::{self, ControlFlow, EventLoop}, window::{Window, WindowBuilder}
+    event::*, 
+    window::Window
 };
 use wgpu::util::DeviceExt;
 
 
-struct State {
-    surface: wgpu::Surface,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
-    size: winit::dpi::PhysicalSize<u32>,
+pub struct State<'window> {
+    pub surface: wgpu::Surface<'window>,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+    pub config: wgpu::SurfaceConfiguration,
+    pub size: winit::dpi::PhysicalSize<u32>,
     // The window must be declared after the surface so
     // it gets dropped after it as the surface contains
     // unsafe references to the window's resources.
-    window: Window,
-    render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
-    num_indices: u32,
+    pub window: Arc<Window>,
+    pub render_pipeline: wgpu::RenderPipeline,
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub num_indices: u32,
 }
 
-impl State {
+impl <'window> State<'window> {
 
     // Creating some of the wgpu types requires async code
-    async fn new(window: Window) -> Self {
+    pub async fn new(window: Window) -> State<'static> {
 
         let size = window.inner_size();
 
@@ -35,12 +37,14 @@ impl State {
                 ..Default::default()
             }
         );
-
         // # Safety
         //
         // The surface needs to live as long as the window that created it.
         // State owns the window, so this should be safe.
-        let surface = unsafe { instance.create_surface(&window) }.unwrap();
+
+        let window_arc = Arc::new(window);
+
+        let surface = instance.create_surface(Arc::clone(&window_arc)).unwrap();
 
         let adapter = instance.request_adapter(
             &wgpu::RequestAdapterOptions {
@@ -52,8 +56,8 @@ impl State {
 
         let (device, queue) = adapter.request_device(
             &wgpu::DeviceDescriptor {
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits::default(),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
                 label: None,
             },
             None, // Trace path
@@ -73,9 +77,10 @@ impl State {
             format: surface_format,
             width: size.width,
             height: size.height,
-            present_mode: surface_caps.present_modes[0],
+            present_mode: wgpu::PresentMode::FifoRelaxed,
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
+            desired_maximum_frame_latency: 10,
         };
         surface.configure(&device, &config);
 
@@ -153,7 +158,7 @@ impl State {
 
         let diffuse_bytes = include_bytes!("happy-tree.png");
         let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
-        let diffuse_rgba = diffuse_image.to_rgba8();
+        let _diffuse_rgba = diffuse_image.to_rgba8();
 
         use image::GenericImageView;
         let dimensions = diffuse_image.dimensions();
@@ -163,7 +168,7 @@ impl State {
             height: dimensions.1,
             depth_or_array_layers: 1,
         };
-        let diffuse_texture = device.create_texture(
+        let _diffuse_texture = device.create_texture(
             &wgpu::TextureDescriptor {
                 size: texture_size,
                 mip_level_count: 1,
@@ -176,8 +181,8 @@ impl State {
             }
         );
         
-        Self {
-            window,
+        State {
+            window: window_arc,
             surface,
             device,
             queue,
@@ -194,7 +199,7 @@ impl State {
         &self.window
     }
 
-    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
             self.config.width = new_size.width;
@@ -203,14 +208,14 @@ impl State {
         }
     }
 
-    fn input(&mut self, event: &WindowEvent) -> bool {
+    pub fn input(&mut self, _event: &WindowEvent) -> bool {
         false
     }
 
-    fn update(&mut self) {
+    pub fn update(&mut self) {
     }
 
-    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -284,7 +289,6 @@ impl Vertex {
         //         }
         //     ]
         // }
-        use std::mem;
 
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
@@ -308,58 +312,3 @@ const INDICES: &[u16] = &[
     1, 2, 4,
     2, 3, 4,
 ];
-
-
-
-pub async fn wgpu_run() {
-    env_logger::init();
-
-    let event_loop = EventLoop::new();
-
-    let window = WindowBuilder::new()
-    .with_inner_size(LogicalSize::new(400.0, 200.0))
-    .build(&event_loop).unwrap();
-
-    let mut state = State::new(window).await;
-
-    event_loop.run(move |event, _, control_flow| {
-        match event {
-            Event::WindowEvent {
-                ref event,
-                window_id,
-            } if window_id == state.window().id() => if !state.input(event) {
-                match event {
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
-                                ..
-                            },
-                        ..
-                    } => *control_flow = ControlFlow::Exit,
-                    WindowEvent::Resized(physical_size) => state.resize(*physical_size),
-                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => state.resize(**new_inner_size),
-                    _ => {},
-                }
-            },
-            Event::RedrawRequested(window_id) if window_id == state.window().id() => {
-                state.update();
-
-                match state.render() {
-                    Ok(_) => {
-                        // render pass here
-                    },
-                    Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
-                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                    Err(e) => eprintln!("{:?}", e),
-                }
-            },
-            Event::MainEventsCleared => {
-                state.window().request_redraw()
-            }
-            _ => {},
-        }
-    });
-}

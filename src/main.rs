@@ -5,7 +5,7 @@ mod custom_error;
 mod config;
 mod window_utils;
 
-use crate::window_utils::rendering_engine::wgpu;
+use crate::window_utils::rendering_engine::{wgpu, winit};
 
 use pollster::FutureExt;
 // use game_loop::game_loop;
@@ -19,7 +19,6 @@ use crate::world_manager::chunk_manager::{ChunkCache, ChunkManager};
 
 
 // my renderer
-use window_utils::rendering_engine::vulkan::init_vulkano;
 // temporary renderer
 // foreign imports
 
@@ -29,7 +28,8 @@ fn main() {
     let chunk = Chunk::new_from_cell_type(CellType::Pink);
     println!("{}", std::mem::size_of::<Chunk>());
     let _ = chunk.save_chunk(&ChunkCoords::from((0, 0))).expect("failed to save");
-    wgpu::wgpu_run().block_on();
+    
+    winit::wgpu_run().block_on();
     
     // init_vulkano();
     // let mut input = &mut WinitInputHelper::new();
