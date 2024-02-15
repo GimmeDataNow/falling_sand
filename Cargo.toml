@@ -38,6 +38,8 @@ wgpu = "0.19.1"
 pollster = "0.3"
 bytemuck = { version = "1.12", features = [ "derive" ] }
 image = {version = "0.24.8", default-features = false, features = ["png", "jpeg"]}
+anyhow = "1.0.79" # NEW!
+cgmath = "0.18.0"
 # temporary renderer
 pixels = "0.13.0"
 

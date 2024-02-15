@@ -1,2 +1,6 @@
 /target
-/chunks
+/chunks/
+/chunks/*
+chunks/
+chunks
+chunks/*
