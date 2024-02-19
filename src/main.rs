@@ -15,6 +15,7 @@ use crate::world_manager::chunk_manager::chunks::Chunk;
 use crate::world_manager::chunk_manager::cells::CellType;
 use world_manager::coordinates::ChunkCoords;
 use crate::world_manager::chunk_manager::{ChunkCache, ChunkManager};
+//use window_utils::rendering_engine::vulkano;
 
 
 // my renderer
@@ -24,11 +25,15 @@ use crate::world_manager::chunk_manager::{ChunkCache, ChunkManager};
 
 fn main() {
     
-    let chunk = Chunk::new_from_cell_type(CellType::Pink);
-    println!("{}", std::mem::size_of::<Chunk>());
-    let _ = chunk.save_chunk(&ChunkCoords::from((0, 0))).expect("failed to save");
+    //let chunk = Chunk::new_from_cell_type(CellType::Pink);
+    //println!("{}", std::mem::size_of::<Chunk>());
+    //let _ = chunk.save_chunk(&ChunkCoords::from((0, 0))).expect("failed to save");
+    
+    //vulkano::vulkan_run();
     
     winit::wgpu_run().block_on();
+
+    
     
     // init_vulkano();
     // let mut input = &mut WinitInputHelper::new();

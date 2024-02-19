@@ -4,12 +4,14 @@
 // imports
 use rand::Rng;
 use serde::{Serialize, Deserialize};
+use bytemuck::NoUninit;
 
 /// # Functionality:
 /// The `CellType` is the material of a cell.
 /// # Options:
 /// The materials are: ```Air```, ```Rock```, etc.
-#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[repr(u32)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize, NoUninit)]
 pub enum CellType {
     #[default]
     Air,
@@ -24,7 +26,6 @@ pub enum CellType {
     Lava,
     Acid,
     AntiVoid,
-
     Pink
 }
 
@@ -146,6 +147,7 @@ impl From<CellType> for &CellTypeProperties {
 ///     pub temp: f32,
 ///}
 /// ```
+#[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Cell {
     pub cell_type: CellType,
@@ -155,8 +157,8 @@ pub struct Cell {
     pub generation: u16,
     #[serde(skip_serializing)]
     pub moved: bool,
-    
 }
+
 
 impl Default for Cell {
     fn default() -> Self {

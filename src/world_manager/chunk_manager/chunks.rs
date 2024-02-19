@@ -8,6 +8,7 @@ use crate::custom_error::CellError;
 use crate::config::CHUNK_LENGTH_USIZE;
 
 
+use bytemuck::{NoUninit, Pod};
 // foreign imports
 use serde::{Serialize, Deserialize};
 use serde_big_array::BigArray;
@@ -17,6 +18,7 @@ use std::fs;
 /// This struct contains both the chunk coordinates and the actual cells. 
 /// 
 /// This has to use `serde_big_array` crate to derive the serialization and deserialization functions since they are not serializable by default (due to their size).
+#[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chunk {
     #[serde(with = "BigArray")]
@@ -28,6 +30,9 @@ impl Default for Chunk {
         Chunk { cells: [Cell::default(); CHUNK_LENGTH_USIZE] }
     }
 }
+
+unsafe impl bytemuck::Pod for Chunk {}
+unsafe impl bytemuck::Zeroable for Chunk {}
 
 
 impl Chunk {

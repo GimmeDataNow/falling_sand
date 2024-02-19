@@ -39,17 +39,17 @@ pub async fn wgpu_run() {
                             (ElementState::Pressed, false, Key::Named(NamedKey::Escape)) => { window_target.exit() },
 
                             (ElementState::Pressed, _, Key::Character("1")) => { 
-                                state.camera.eye += (1.0, 0.0, 0.0).into(); 
-                                state.camera_uniform.update_view_proj(&state.camera);
-                                state.queue.write_buffer(&state.camera_buffer, 0, bytemuck::cast_slice(&[state.camera_uniform]));
-                                state.window.request_redraw()
+                                //state.camera.eye += (1.0, 0.0, 0.0).into(); 
+                                //state.camera_uniform.update_view_proj(&state.camera);
+                                //state.queue.write_buffer(&state.camera_buffer, 0, bytemuck::cast_slice(&[state.camera_uniform]));
+                                //state.window.request_redraw()
                             },
 
                             (ElementState::Pressed, _, Key::Character("2")) => { 
-                                state.camera.eye += (-1.0, 0.0, 0.0).into(); 
-                                state.camera_uniform.update_view_proj(&state.camera);
-                                state.queue.write_buffer(&state.camera_buffer, 0, bytemuck::cast_slice(&[state.camera_uniform]));
-                                state.window.request_redraw()
+                                // state.camera.eye += (-1.0, 0.0, 0.0).into(); 
+                                // state.camera_uniform.update_view_proj(&state.camera);
+                                // state.queue.write_buffer(&state.camera_buffer, 0, bytemuck::cast_slice(&[state.camera_uniform]));
+                                // state.window.request_redraw()
                             },
 
                             // key detection / prints the key to the console

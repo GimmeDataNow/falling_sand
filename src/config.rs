@@ -9,3 +9,4 @@ pub const CHUNK_LENGTH_USIZE: usize = CHUNK_SIZE_I32 as usize;
 pub const SCREEN_WIDTH: u32 = 640;
 pub const SCREEN_HEIGHT: u32 = 360;
 pub const SCREEN_SCALE: f32 = 2.0;
+
